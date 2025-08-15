@@ -1,0 +1,164 @@
+.syntax unified
+.cpu cortex-m4
+.thumb
+
+.extern _sRTOS_TaskList
+.extern _sRTOS_CurrentTask
+.extern _sRTOSSchedulerGetFirstAvailable
+.global SysTick_Handler
+.global sRTOSStartScheduler
+
+
+
+
+
+
+/*
+    
+When an interrupt occurs on ARM Cortex-M:
+
+1. **Hardware automatically saves context:**  
+   The processor pushes these registers onto the current stack (MSP or PSP):
+   - `r0`, `r1`, `r2`, `r3`, `r12`, `lr`, `pc`, `xPSR`
+
+2. **Software can save more context:**  
+   If needed, the interrupt handler (or RTOS) can manually push additional 
+   registers (`r4`–`r11`, etc.) to the stack.
+
+3. **On return:**  
+   The processor pops the saved registers from the stack, restoring the previous 
+   state and resuming execution.
+
+**Summary:**  
+Hardware saves core registers automatically; software can save more if needed.
+This ensures the interrupted code resumes correctly after the interrupt.
+    
+*/
+.section .text.SysTick_Handler,"ax",%progbits
+.type SysTick_Handler, %function
+SysTick_Handler:                        // r0,r1,r2,r3,r12,lr,pc,psr      saved by interrupt
+    cpsid   i                           // disable isr
+    push    {lr}
+    ldr     r0, =_sRTOS_CurrentTask     // the _sRTOSSchedulerGetCurrent return the current task (r0 is the return value)
+    ldr     r1, [r0]
+    bl	    _sRTOSSchedulerGetFirstAvailable //
+    pop     {lr}
+    // r1 = currentTask, r0 = firstAvbleTask
+    cmp     r1, r0                      // check if current and first avaible are the same
+    bne    initSwitchTask
+    // if eq  then exit
+    cpsie   i                           // enable isr  
+    bx      lr                          //
+
+
+initSwitchTask:
+    ldr     r3, [r1, #4]                // r3 = CurrentTask->nextTask
+    ldrb    r2, [r0, #13]               // first available task priority
+    ldrb    r12, [r3, #13]              // next task priority (next relative to the current task)
+    cmp     r2, r12                     // cmp the nextTask and firstAvble priority
+    // because the list task is order by priority 
+    // if next and firstAvble tasks have the same priority
+    // this means the next task should run an equal amout as current and firstAvble
+    // note: that firstAvbleTask and nextTask could be the same Task
+    beq    switchToNextTask
+    mov    r3, r0
+
+switchToNextTask:
+    push    {r4-r7}                     // save r4,r5,r6,r7,
+    stmdb   sp!, {r8-r11}               //      r8,r9,r10,r11
+
+    ldr	    r0, =0x2                    // sReady:0x2
+    strb	r0, [r1, #12]               // change current task status to sReady
+
+    ldr	    r2, [r1, #8]                // CurrentTask->fps
+    cmp     r2, #1                      //
+    bne     1f                          //
+    vstmdb  sp!, {s0-s31}               //
+    vmrs    r1, fpscr                   //
+    push    {r1}                        //
+1:
+    str     sp, [r1]                    // save the new current task sp
+
+    ldr     sp, [r3]                    // SP = nextTask->stackPt
+
+    ldr	    r0, =0x1                    // sRunning:0x1
+    strb	r0, [r3, #12]               // change next task status to sRunning
+
+    ldr     r0, =_sRTOS_CurrentTask
+    str     r3, [r0]                    // save the current task ptr
+
+    ldr	    r2, [r3, #8]                // nextTask->fps
+    cmp     r2, #1                      //
+    bne     2f                          //
+    pop     {r0}                        //
+    vmsr    fpscr, r0                   //
+    vldmia  sp!, {s0-s31}               //
+2:
+    ldmia   sp!, {r8-r11}               //
+    pop     {r4-r7}                     //
+    cpsie   i                           // enable isr  
+    bx      lr                          //
+.size SysTick_Handler, .-SysTick_Handler
+
+/*
+When returning from an interrupt on ARM Cortex-M, **context restore**
+means putting back all the CPU registers and state so the interrupted code can resume
+as if nothing happened.
+
+### How Context Restore Works
+
+1. **Hardware context restore:**  
+   - When an interrupt occurs, the hardware automatically pushes
+   `r0`, `r1`, `r2`, `r3`, `r12`, `lr`, `pc`, and `xPSR` onto the stack.
+   - When returning, the hardware pops these registers off the stack.
+
+2. **Software context restore:**  
+   - If the interrupt handler or RTOS saved more registers (like `r4`–`r11`),
+   it must restore them before returning.
+
+3. **Returning with `bx lr` and `lr = 0xFFFFFFF9`:**  
+   - In ARM Cortex-M, the **link register (`lr`)** is set to a special value called
+   **EXC_RETURN** (e.g., `0xFFFFFFF9`) during an exception.
+   - Executing `bx lr` with `lr = 0xFFFFFFF9` tells the processor:
+     - "I am done with the interrupt. Restore the context from the
+     stack and resume execution in Thread mode using the Main Stack Pointer (MSP)."
+   - The processor automatically pops the saved hardware registers and resumes the interrupted code.
+
+---
+
+**Summary:**  
+- `bx lr` with `lr = 0xFFFFFFF9` triggers the ARM Cortex-M exception return mechanism.
+- The processor restores all hardware-saved registers and resumes execution where the
+    interrupt occurred.
+
+*/
+
+
+.section .text.sRTOSStartScheduler,"ax",%progbits
+.type sRTOSStartScheduler, %function
+sRTOSStartScheduler:
+    cpsid   i                           // disable isr
+    ldr     r0, =_sRTOS_TaskList                //
+    ldr     r2, [r0]                            //
+    ldr     sp, [r2]                            //
+    ldr	    r1, [r2, #8]                        // r2=_sRTOS_TaskList->fps
+/*
+    arm cmp r0 to true
+    if true: add sp, sp, #166
+    else: add sp, sp, #36
+*/
+    cmp     r1, #1
+    ite     eq
+    addeq   sp, sp, #166
+    addne   sp, sp, #32
+    pop     {r0}                                // pop PC
+    add     sp, sp, #20
+    pop     {r1}
+    mov     lr, r1
+    ldr	    r1, =0x1 
+    strb	r1, [r2, #12]                       // change task status to sRunning
+    ldr     r0, =_sRTOS_CurrentTask
+    str     r2, [r0]                            // save the current task ptr
+    cpsie   i
+    bx      lr
+.size sRTOSStartScheduler, .-sRTOSStartScheduler

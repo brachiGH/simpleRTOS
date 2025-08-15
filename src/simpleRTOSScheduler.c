@@ -1,0 +1,148 @@
+/*
+ * simpleRTOS.c
+ *
+ *  Created on: Aug 14, 2025
+ *      Author: brachiGH
+ */
+
+#include "simpleRTOSConfig.h"
+#include "simpleRTOS.h"
+#include "stdlib.h"
+#include "stm32f4xx.h"
+#include "string.h"
+
+#define SYSPRI3 (*((volatile uint32_t *)0xE000ED20))
+
+
+/*************PV*****************/
+sTaskHandle_t *_sRTOS_TaskList;
+/********************************/
+
+
+void _idle(void *)
+{
+  for (;;)
+  {
+    sRTOSTaskYield();
+  }
+}
+
+void _insertTask(sTaskHandle_t *task)
+{
+  __disable_irq();
+  // insert as first
+  if (_sRTOS_TaskList->priority < task->priority)
+  {
+    task->nextTask = _sRTOS_TaskList;
+    _sRTOS_TaskList = task;
+    return;
+  }
+
+  sTaskHandle_t *currentTask = _sRTOS_TaskList;
+  while (currentTask->nextTask)
+  {
+    sTaskHandle_t *nextTask = currentTask->nextTask;
+    if (nextTask->priority < task->priority)
+    {
+      task->nextTask = nextTask;
+      currentTask->nextTask = task;
+      return;
+    }
+    currentTask = nextTask;
+  }
+
+  currentTask->nextTask = task;
+  task->nextTask = NULL;
+  __enable_irq();
+}
+
+
+void _deleteTask(sTaskHandle_t *task)
+{
+  __disable_irq();
+    if (_sRTOS_TaskList == task)
+  {
+    _sRTOS_TaskList= _sRTOS_TaskList->nextTask;
+    goto freeTask;
+  }
+
+
+  sTaskHandle_t *currentTask = _sRTOS_TaskList;
+  while (currentTask->nextTask)
+  {
+    sTaskHandle_t *nextTask = currentTask->nextTask;
+    if (nextTask == task)
+    {
+      currentTask->nextTask = nextTask->nextTask;
+      goto freeTask;
+    }
+    currentTask = nextTask;
+  }
+
+
+freeTask:
+  free(task->stackPt);
+  free(task);
+  __enable_irq();
+  return;
+}
+
+__WEAK void SysTick_Handler(void) {}
+
+sRTOS_StatusTypeDef sRTOSInit(sUBaseType_t BUS_FREQ)
+{
+  __disable_irq();
+  uint32_t MILLIS_PRESCALER = (BUS_FREQ / 1000);
+
+  SysTick->CTRL = 0;                                  // disable Systic timer
+  SysTick->VAL = 0;                                   // set value to 0
+  SysTick->LOAD = (__sQUANTA_MS * MILLIS_PRESCALER) - 1; // the value start counting from 0
+  /*
+   * This makes SysTick the second least urgent interrupt after PendSV,
+        (PendSV:
+         What it is: a software-triggered, low‑priority exception meant for deferred work. RTOSes use it to perform context switches outside time‑critical ISRs.
+         Why it’s used: you can request a switch from any ISR (e.g., SysTick), but the actual save/restore runs in PendSV at the lowest priority so higher‑priority interrupts aren’t delayed.
+         How to trigger: set the PENDSVSET bit in SCB->ICSR; hardware clears it on entry.)
+   * so it only runs when nothing more important is happening.
+   * Other interrupts with higher priority can interrupt the SysTick handler,
+   * making your scheduler less likely to interfere with time-critical tasks.
+   */
+  uint32_t v = SYSPRI3;
+  v &= ~(0xFFu << 16 | 0xFFu << 24);   // PendSV: lowest
+  v |=  (0xFFu << 16) | (0xFEu << 24); // SysTic: just above PendSV
+  SYSPRI3 = v;
+
+  SysTick->CTRL = 0x00000007; // enable clock + Enables SysTick exception request
+                              // + set clock source to processor clock
+  __enable_irq();
+
+  _sRTOS_TaskList = (sTaskHandle_t *)malloc(sizeof(sTaskHandle_t));
+  if (_sRTOS_TaskList == NULL)
+  {
+    return sRTOS_ALLOCATION_FAILED;
+  }
+
+  _sRTOS_TaskList->nextTask = _sRTOS_TaskList; // idle should recall it self when thier is no other task to do
+  return sRTOSTaskCreate(_idle,
+                         "idle task",
+                         NULL,
+                         16,
+                         sPriorityIdle,
+                         _sRTOS_TaskList,
+						 srFALSE);
+}
+
+sTaskHandle_t *_sRTOSSchedulerGetFirstAvailable(void)
+{
+  sTaskHandle_t *task = _sRTOS_TaskList;
+  while (task)
+  {
+    if (task->status == sReady || task->status == sRunning)
+    {
+      return task;
+    }
+    task = task->nextTask;
+  }
+
+  return task;
+}
