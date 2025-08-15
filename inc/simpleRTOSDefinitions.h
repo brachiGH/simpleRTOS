@@ -11,8 +11,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define srFALSE 0
-#define srTRUE 1
+#define srFALSE 0u
+#define srTRUE 1u
+
 #define MIN_STACK_SIZE_NO_FPU 16
 #define MIN_STACK_SIZE_FPU 49
 #define MAX_TASK_NAME_LEN 12
@@ -20,6 +21,12 @@
 
 typedef int32_t sBaseType_t;
 typedef uint32_t sUBaseType_t;
+
+typedef enum
+{
+  srFalse = 0u,
+  srTrue
+} sbool_t;
 
 typedef enum
 {
@@ -51,11 +58,11 @@ typedef enum
   sDeleted
 } sTaskStatus_t;
 
-__attribute__((aligned(4))) struct tcb 
+__attribute__((packed, aligned(4))) struct tcb 
 {
   sUBaseType_t *stackPt;
   struct tcb *nextTask;
-  sUBaseType_t fps;     // floating-point state
+  sbool_t fps;     // floating-point state
   sTaskStatus_t status;
   sPriority_t priority;
   char name[12];
@@ -63,12 +70,12 @@ __attribute__((aligned(4))) struct tcb
 
 typedef struct tcb sTaskHandle_t;
 
-typedef struct __attribute__((aligned(4)))
+typedef struct __attribute__((packed, aligned(4)))
 {
   sUBaseType_t *stackPt;   // Pointer to the stack
-  sUBaseType_t Period;     // Timer period
   sUBaseType_t id;         // Timer id
-  sUBaseType_t autoReload; // Timer autoReload
+  sbool_t autoReload; // Timer autoReload
+  sbool_t Period;     // Timer period
 } sTimerHandle_t;
 
 typedef void (*sTaskFunc_t)(void *arg);

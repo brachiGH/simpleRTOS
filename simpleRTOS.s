@@ -36,7 +36,7 @@ This ensures the interrupted code resumes correctly after the interrupt.
 */
 .section .text.SysTick_Handler,"ax",%progbits
 .type SysTick_Handler, %function
-SysTick_Handler:                        // r0,r1,r2,r3,r12,lr,pc,psr      saved by interrupt
+SysTick_Handler:                        // r0,r1,r2,r3,r12,lr,pc,psr   saved by interrupt
     cpsid   i                           // disable isr
     push    {lr}
     ldr     r0, =_sRTOS_CurrentTask     // the _sRTOSSchedulerGetCurrent return the current task (r0 is the return value)
@@ -48,13 +48,13 @@ SysTick_Handler:                        // r0,r1,r2,r3,r12,lr,pc,psr      saved 
     bne    initSwitchTask
     // if eq  then exit
     cpsie   i                           // enable isr  
-    bx      lr                          //
+    bx      lr                          // return the same task
 
 
 initSwitchTask:
     ldr     r3, [r1, #4]                // r3 = CurrentTask->nextTask
-    ldrb    r2, [r0, #13]               // first available task priority
-    ldrb    r12, [r3, #13]              // next task priority (next relative to the current task)
+    ldrb    r2, [r0, #10]               // first available task priority
+    ldrb    r12, [r3, #10]              // next task priority (next relative to the current task)
     cmp     r2, r12                     // cmp the nextTask and firstAvble priority
     // because the list task is order by priority 
     // if next and firstAvble tasks have the same priority
@@ -67,37 +67,40 @@ switchToNextTask:
     push    {r4-r7}                     // save r4,r5,r6,r7,
     stmdb   sp!, {r8-r11}               //      r8,r9,r10,r11
 
-    ldr	    r0, =0x2                    // sReady:0x2
-    strb	r0, [r1, #12]               // change current task status to sReady
-
-    ldr	    r2, [r1, #8]                // CurrentTask->fps
-    cmp     r2, #1                      //
+    ldrb    r0, [r1, #9]                // read current status
+    cmp     r0, #1                      // check if the task status is running (the status cloud change by other events)
+    bne     3f
+    mov     r0, #2                      //  sReady:0x02
+    strb	r0, [r1, #9]                // change current task status to sReady
+3:
+    ldrb	r2, [r1, #8]                // CurrentTask->fps
+    cmp     r2, #1                      // check if floating point stage is on
     bne     1f                          //
-    vstmdb  sp!, {s0-s31}               //
-    vmrs    r1, fpscr                   //
-    push    {r1}                        //
+    vstmdb  sp!, {s0-s31}               // if float point mode is on save fpu registers of the current task
+    vmrs    r0, fpscr                   //
+    push    {r0}                        //
 1:
     str     sp, [r1]                    // save the new current task sp
 
     ldr     sp, [r3]                    // SP = nextTask->stackPt
 
     ldr	    r0, =0x1                    // sRunning:0x1
-    strb	r0, [r3, #12]               // change next task status to sRunning
+    strb	r0, [r3, #9]                // change next task status to sRunning
 
     ldr     r0, =_sRTOS_CurrentTask
     str     r3, [r0]                    // save the current task ptr
 
-    ldr	    r2, [r3, #8]                // nextTask->fps
+    ldrb    r2, [r3, #8]                // nextTask->fps
     cmp     r2, #1                      //
     bne     2f                          //
-    pop     {r0}                        //
+    pop     {r0}                        // if float point mode is on restore fpu registers of the next task
     vmsr    fpscr, r0                   //
     vldmia  sp!, {s0-s31}               //
 2:
     ldmia   sp!, {r8-r11}               //
     pop     {r4-r7}                     //
     cpsie   i                           // enable isr  
-    bx      lr                          //
+    bx      lr                          // return and start the next task
 .size SysTick_Handler, .-SysTick_Handler
 
 /*
@@ -141,7 +144,7 @@ sRTOSStartScheduler:
     ldr     r0, =_sRTOS_TaskList                //
     ldr     r2, [r0]                            //
     ldr     sp, [r2]                            //
-    ldr	    r1, [r2, #8]                        // r2=_sRTOS_TaskList->fps
+    ldrb    r1, [r2, #8]                        // r2=_sRTOS_TaskList->fps
 /*
     arm cmp r0 to true
     if true: add sp, sp, #166
@@ -156,7 +159,7 @@ sRTOSStartScheduler:
     pop     {r1}
     mov     lr, r1
     ldr	    r1, =0x1 
-    strb	r1, [r2, #12]                       // change task status to sRunning
+    strb	r1, [r2, #9]                       // change task status to sRunning
     ldr     r0, =_sRTOS_CurrentTask
     str     r2, [r0]                            // save the current task ptr
     cpsie   i

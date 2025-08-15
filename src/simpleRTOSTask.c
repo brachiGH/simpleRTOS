@@ -92,7 +92,7 @@ sRTOS_StatusTypeDef sRTOSTaskCreate(
                                                                      // is saved onto the same stack
   taskHandle->nextTask = NULL;
   taskHandle->status = sReady;
-  taskHandle->fps = fpsMode;
+  taskHandle->fps = (sbool_t)fpsMode;
   taskHandle->priority = priority;
   strncpy(taskHandle->name, name, MAX_TASK_NAME_LEN);
 
@@ -114,14 +114,10 @@ void sRTOSTaskDelete(sTaskHandle_t *taskHandle)
   // _deleteTask(taskHandle); // because of the disgne, deleting the task from 
                               // the task list will add alot of edge cases to 
                               // deal with, thus alot code
-     
-  __disable_irq();       
-  taskHandle->status = sDeleted;
-  free(taskHandle->stackPt);
-  // only 26byte are left
-  
-  __enable_irq();
 
+  free(taskHandle->stackPt);// only 26byte are left
+
+  taskHandle->status = sDeleted;
   if (taskHandle == _sRTOS_CurrentTask)
     sRTOSTaskYield();
 }
