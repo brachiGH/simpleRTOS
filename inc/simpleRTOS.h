@@ -10,6 +10,27 @@
 
 #include "simpleRTOSDefinitions.h"
 
+/**
+  \brief   Disable IRQ Interrupts
+  \details Disables IRQ interrupts by setting the I-bit in the CPSR.
+  Can only be executed in Privileged modes.
+ */
+__attribute__((always_inline)) static __inline void __sDisable_irq(void)
+{
+  __asm volatile ("cpsid i" : : : "memory");
+}
+
+/**
+  \brief   Enable IRQ Interrupts
+  \details Enables IRQ interrupts by clearing the I-bit in the CPSR.
+           Can only be executed in Privileged modes.
+ */
+__attribute__((always_inline)) static __inline void __sEnable_irq(void)
+{
+  __asm volatile ("cpsie i" : : : "memory");
+}
+
+
 extern void SysTick_Handler(void);
 
 sRTOS_StatusTypeDef sRTOSInit(sUBaseType_t BUS_FREQ);

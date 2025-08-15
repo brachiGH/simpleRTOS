@@ -8,8 +8,13 @@
 #include "simpleRTOSConfig.h"
 #include "simpleRTOS.h"
 #include "stdlib.h"
-#include "stm32f4xx.h"
 #include "string.h"
+
+
+#define SYST_CSR (*((volatile uint32_t *)0xE000E010))
+#define SYST_RVR (*((volatile uint32_t *)0xE000E014))
+#define SYST_CVR (*((volatile uint32_t *)0xE000E018))
+#define SYST_CALIB (*((volatile uint32_t *)0xE000E01C))
 
 #define SYSPRI3 (*((volatile uint32_t *)0xE000ED20))
 
@@ -30,7 +35,7 @@ void _idle(void *)
 
 void _insertTask(sTaskHandle_t *task)
 {
-  __disable_irq();
+  __sDisable_irq();
   // insert as first
   if (_sRTOS_TaskList->priority < task->priority)
   {
@@ -54,13 +59,13 @@ void _insertTask(sTaskHandle_t *task)
 
   currentTask->nextTask = task;
   task->nextTask = NULL;
-  __enable_irq();
+  __sEnable_irq();
 }
 
 
 void _deleteTask(sTaskHandle_t *task)
 {
-  __disable_irq();
+  __sDisable_irq();
     if (_sRTOS_TaskList == task)
   {
     _sRTOS_TaskList= _sRTOS_TaskList->nextTask;
@@ -84,20 +89,20 @@ void _deleteTask(sTaskHandle_t *task)
 freeTask:
   free(task->stackPt);
   free(task);
-  __enable_irq();
+  __sEnable_irq();
   return;
 }
 
-__WEAK void SysTick_Handler(void) {}
+__attribute__((weak)) void SysTick_Handler(void) {}
 
 sRTOS_StatusTypeDef sRTOSInit(sUBaseType_t BUS_FREQ)
 {
-  __disable_irq();
+  __sDisable_irq();
   uint32_t MILLIS_PRESCALER = (BUS_FREQ / 1000);
 
-  SysTick->CTRL = 0;                                  // disable Systic timer
-  SysTick->VAL = 0;                                   // set value to 0
-  SysTick->LOAD = (__sQUANTA_MS * MILLIS_PRESCALER) - 1; // the value start counting from 0
+  SYST_CSR = 0;                                  // disable Systic timer
+  SYST_CVR = 0;                                   // set value to 0
+  SYST_RVR = (__sQUANTA_MS * MILLIS_PRESCALER) - 1; // the value start counting from 0
   /*
    * This makes SysTick the second least urgent interrupt after PendSV,
         (PendSV:
@@ -113,9 +118,9 @@ sRTOS_StatusTypeDef sRTOSInit(sUBaseType_t BUS_FREQ)
   v |=  (0xFFu << 16) | (0xFEu << 24); // SysTic: just above PendSV
   SYSPRI3 = v;
 
-  SysTick->CTRL = 0x00000007; // enable clock + Enables SysTick exception request
+  SYST_CSR = 0x00000007; // enable clock + Enables SysTick exception request
                               // + set clock source to processor clock
-  __enable_irq();
+  __sEnable_irq();
 
   _sRTOS_IdleTask = (sTaskHandle_t *)malloc(sizeof(sTaskHandle_t));
   if (_sRTOS_IdleTask == NULL)

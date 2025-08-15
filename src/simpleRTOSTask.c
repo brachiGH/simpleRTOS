@@ -8,9 +8,9 @@
 #include "simpleRTOSConfig.h"
 #include "simpleRTOS.h"
 #include "stdlib.h"
-#include "stm32f4xx.h"
 #include "string.h"
 
+#define ICSR (*((volatile uint32_t *)0xE000ED04))
 
 sTaskHandle_t *_sRTOS_CurrentTask;
 
@@ -19,6 +19,7 @@ extern void _insertTask(sTaskHandle_t *task);
 
 void sRTOSTaskYield(void)
 {
+  ICSR &= (1u << 26); // changes SysTick exception state to pending
 }
 
 void _taskInitStack(sUBaseType_t *stack, sTaskFunc_t taskFunc, void *arg,
@@ -118,10 +119,10 @@ void sRTOSTaskDelete(sTaskHandle_t *taskHandle)
                               // the task list will add a lot of edge cases to
                               // deal with, thus a lot code will be added to the scheduler
 
-  __disable_irq(); // in case deleted task is the next to run
+  __sDisable_irq(); // in case deleted task is the next to run
   free(taskHandle->stackPt);// only 26byte are left
   taskHandle->status = sDeleted;
-  __enable_irq();
+  __sEnable_irq();
 
   // if the current task deletes itself yield
   if (taskHandle == _sRTOS_CurrentTask)
