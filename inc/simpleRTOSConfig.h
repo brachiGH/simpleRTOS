@@ -10,5 +10,7 @@
 
 // #define __sUSE_PREEMPTION 1 // unavailable
 #define __sQUANTA_MS 1  // rotate same priority tasks
+#define __sTIMER_TASK_STACK_DEPTH 256 // in words
+#define __sTIMER_LIST_LENGTH 12       // max number of timer
 
 #endif

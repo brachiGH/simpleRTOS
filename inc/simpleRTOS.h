@@ -9,6 +9,7 @@
 #define SIMPLERTOS_H_
 
 #include "simpleRTOSDefinitions.h"
+#define __ICSR (*((volatile uint32_t *)0xE000ED04))
 
 /**
   \brief   Disable IRQ Interrupts
@@ -30,8 +31,9 @@ __attribute__((always_inline)) static __inline void __sEnable_irq(void)
   __asm volatile ("cpsie i" : : : "memory");
 }
 
-
 extern void SysTick_Handler(void);
+void SVC_Handler(void);
+
 
 sRTOS_StatusTypeDef sRTOSInit(sUBaseType_t BUS_FREQ);
 extern void sRTOSStartScheduler(void);
@@ -44,17 +46,21 @@ sRTOS_StatusTypeDef sRTOSTaskCreate(
     sPriority_t priority,
     sTaskHandle_t *taskHandle,
     sUBaseType_t fpsMode);
-void sRTOSTaskYield();
 void sRTOSTaskStop(sTaskHandle_t *taskHandle);
 void sRTOSTaskStart(sTaskHandle_t *taskHandle);
 void sRTOSTaskDelete(sTaskHandle_t *taskHandle);
 
+static inline void sRTOSTaskYield(void)
+{
+  __ICSR = (1u << 26); // changes SysTick exception state to pending
+}
+
 sRTOS_StatusTypeDef sRTOSTimerCreate(
-    sTimerFunc_t timer,
+    sTimerFunc_t timerTask,
     sUBaseType_t id,
     sUBaseType_t period,
     sUBaseType_t autoReload,
-    sTimerHandle_t *taskHandle,
+    sTimerHandle_t *timerHandle,
     sUBaseType_t fpsMode);
 void sRTOSTimerDelete(sTimerHandle_t *timerHandle);
 void sRTOSTimerUpdatePeriode(sTimerHandle_t *timerHandle);
@@ -67,6 +73,6 @@ void sRTOSMutexCreate(sSemaphore_t *sem);
 void sRTOSMutexGive();
 void sRTOSMutexTake();
 
-void sRTOSDelay();
+void sRTOSDelay(sUBaseType_t duration_quanta);
 
 #endif /* SIMPLERTOS_H_ */

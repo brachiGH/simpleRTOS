@@ -1,0 +1,55 @@
+/*
+ * simpleRTOSHandlers.c
+ *
+ *  Created on: Aug 15, 2025
+ *      Author: benhih
+ */
+
+#include "simpleRTOS.h"
+
+__attribute__((weak)) void SysTick_Handler(void)
+{
+	__asm volatile ("svc #0\n");
+}
+
+__attribute__((naked)) void SVC_Handler(void)
+{
+	// if the fucntion is not naked, an other stack frame
+	// is created for the SVC_Handler function.
+	// And the address for this stack is moved into
+	// MSP register, which leads to the wrong stack to be
+	// passed to the SVC_Handler_c
+	// The register value of r0 is the first argument in
+  // SVC_Handler_c function, which called by 'B SVC_Handler_c'
+
+	__asm volatile (
+		"TST lr, #4        \n"
+		"ITE EQ            \n"
+		"MRSEQ r0, MSP     \n"
+		"MRSNE r0, PSP     \n"
+		"B SVC_Handler_c   \n"
+	);
+}
+
+void SVC_Handler_c(uint32_t *sp)
+{
+	// to better inderstand the sp value refere to the image below
+	// the sp points to the top of the stack which mean the r0 register
+	// of the svc_add fucntion (aka it fisrt argument 'a')
+	uint8_t *pc = (uint8_t *)sp[6]; // stacked PC
+	uint8_t svc_number = pc[-2];
+	// why the pc value contain the svc number?
+	// The PC (Program Counter) is a CPU register that holds the
+	// address of the next instruction to execute
+	// and this address points to the epilogue of the
+	// svc_add function (image below) which is a NOP in our case
+
+  switch (svc_number)
+  {
+  	case 0:
+  		// __asm volatile ("b ");
+  		break;
+  	default:
+  		break;
+  }
+}

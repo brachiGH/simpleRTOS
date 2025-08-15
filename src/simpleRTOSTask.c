@@ -9,22 +9,19 @@
 #include "simpleRTOS.h"
 #include "stdlib.h"
 #include "string.h"
-
-#define ICSR (*((volatile uint32_t *)0xE000ED04))
-
-sTaskHandle_t *_sRTOS_CurrentTask;
-
 extern void _deleteTask(sTaskHandle_t *task);
 extern void _insertTask(sTaskHandle_t *task);
 
-void sRTOSTaskYield(void)
-{
-  ICSR &= (1u << 26); // changes SysTick exception state to pending
-}
+sTaskHandle_t *_sRTOS_CurrentTask;
 
-void _taskInitStack(sUBaseType_t *stack, sTaskFunc_t taskFunc, void *arg,
-                    sUBaseType_t stacksize)
+sUBaseType_t *_taskInitStack(sTaskFunc_t taskFunc, void *arg,
+                               sUBaseType_t stacksize, sUBaseType_t fpsMode)
 {
+  stacksize = ((fpsMode == srFALSE)?  MIN_STACK_SIZE_NO_FPU : MIN_STACK_SIZE_FPU) + stacksize;
+  sUBaseType_t *stack = (sUBaseType_t *)malloc(sizeof(sUBaseType_t) * (stacksize));
+  if (stack == NULL)
+    return NULL;
+
   /*
   Hardware automatically pushes these registers onto the stack (in this order):
       r0
@@ -61,6 +58,7 @@ void _taskInitStack(sUBaseType_t *stack, sTaskFunc_t taskFunc, void *arg,
   // stack[stacksize - 17] = 0xEEEEEEEE; // s31
   // stack[stacksize - 18] = 0xFFFFFFFF; // s32
 #endif
+  return stack;
 }
 
 /*
@@ -77,21 +75,18 @@ sRTOS_StatusTypeDef sRTOSTaskCreate(
     sTaskHandle_t *taskHandle,
     sUBaseType_t fpsMode)
 {
-  sUBaseType_t minstack = (fpsMode == srFALSE)?  MIN_STACK_SIZE_NO_FPU : MIN_STACK_SIZE_FPU;
-
-  sUBaseType_t *stack = (sUBaseType_t *)malloc(sizeof(sUBaseType_t) * (stacksizeWords + minstack));
+  sUBaseType_t *stack = _taskInitStack(taskFunc, arg, stacksizeWords, fpsMode);
   if (stack == NULL)
     return sRTOS_ALLOCATION_FAILED;
 
-  _taskInitStack(stack, taskFunc, arg, stacksizeWords);
-
+  taskHandle->stackBase = stack;
   /*
    * Task Init begin
    *
    * Systic (interrupt handler) pushes registers (r4–r11).
    */
-  taskHandle->stackPt = (sUBaseType_t *)(stack+ stacksizeWords - minstack); // stack pointer, after stack frame
-                                                                     // is saved onto the same stack
+  taskHandle->stackPt = (sUBaseType_t *)(stack+ stacksizeWords); // stack pointer, after stack frame
+                                                                 // is saved onto the same stack
   taskHandle->nextTask = NULL;
   taskHandle->status = sReady;
   taskHandle->fps = (sbool_t)fpsMode;
@@ -106,11 +101,23 @@ void sRTOSTaskStop(sTaskHandle_t *taskHandle)
 {
   if (taskHandle->status != sDeleted)
     taskHandle->status = sBlocked;
+
+  // if the current task deletes itself yield
+  if (taskHandle == _sRTOS_CurrentTask)
+    sRTOSTaskYield();
 }
+
+/*
+ * will yeild if the priority of the current running Task is lower
+ * then the started Task
+*/
 void sRTOSTaskStart(sTaskHandle_t *taskHandle)
 {
   if (taskHandle->status != sDeleted)
     taskHandle->status = sReady;
+
+  if (taskHandle->priority > _sRTOS_CurrentTask->priority)
+    sRTOSTaskYield();
 }
 
 void sRTOSTaskDelete(sTaskHandle_t *taskHandle)
@@ -120,11 +127,19 @@ void sRTOSTaskDelete(sTaskHandle_t *taskHandle)
                               // deal with, thus a lot code will be added to the scheduler
 
   __sDisable_irq(); // in case deleted task is the next to run
-  free(taskHandle->stackPt);// only 26byte are left
+  free(taskHandle->stackBase);// only 26byte are left
   taskHandle->status = sDeleted;
+  taskHandle->stackBase = NULL;
+  taskHandle->stackPt = NULL;
   __sEnable_irq();
 
   // if the current task deletes itself yield
   if (taskHandle == _sRTOS_CurrentTask)
     sRTOSTaskYield();
+}
+
+
+void sRTOSDelay(sUBaseType_t duration_ms)
+{
+  
 }

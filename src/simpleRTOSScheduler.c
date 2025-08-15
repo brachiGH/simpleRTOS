@@ -24,7 +24,6 @@ sTaskHandle_t *_sRTOS_TaskList;
 sTaskHandle_t *_sRTOS_IdleTask;
 /********************************/
 
-
 void _idle(void *)
 {
   for (;;)
@@ -92,8 +91,6 @@ freeTask:
   __sEnable_irq();
   return;
 }
-
-__attribute__((weak)) void SysTick_Handler(void) {}
 
 sRTOS_StatusTypeDef sRTOSInit(sUBaseType_t BUS_FREQ)
 {

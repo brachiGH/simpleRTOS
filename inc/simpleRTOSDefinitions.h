@@ -65,6 +65,7 @@ __attribute__((packed, aligned(4))) struct tcb
   sbool_t fps;     // floating-point state
   sTaskStatus_t status;
   sPriority_t priority;
+  sUBaseType_t *stackBase;
   char name[12];
 };
 
@@ -74,8 +75,8 @@ typedef struct __attribute__((packed, aligned(4)))
 {
   sUBaseType_t *stackPt;   // Pointer to the stack
   sUBaseType_t id;         // Timer id
+  sUBaseType_t Period;     // Timer period (in QUANTA)
   sbool_t autoReload; // Timer autoReload
-  sbool_t Period;     // Timer period
 } sTimerHandle_t;
 
 typedef void (*sTaskFunc_t)(void *arg);
