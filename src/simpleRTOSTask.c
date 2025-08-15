@@ -65,6 +65,7 @@ void _taskInitStack(sUBaseType_t *stack, sTaskFunc_t taskFunc, void *arg,
 /*
  * note: can be called after sRTOSStartScheduler()
  * and the new task will be added
+ * note: nextTasK changes because of _insertTask
  */
 sRTOS_StatusTypeDef sRTOSTaskCreate(
     sTaskFunc_t taskFunc,
@@ -102,22 +103,27 @@ sRTOS_StatusTypeDef sRTOSTaskCreate(
 
 void sRTOSTaskStop(sTaskHandle_t *taskHandle)
 {
-  taskHandle->status = sBlocked;
+  if (taskHandle->status != sDeleted)
+    taskHandle->status = sBlocked;
 }
 void sRTOSTaskStart(sTaskHandle_t *taskHandle)
 {
-  taskHandle->status = sReady;
+  if (taskHandle->status != sDeleted)
+    taskHandle->status = sReady;
 }
 
 void sRTOSTaskDelete(sTaskHandle_t *taskHandle)
 {
-  // _deleteTask(taskHandle); // because of the disgne, deleting the task from 
-                              // the task list will add alot of edge cases to 
-                              // deal with, thus alot code
+  // _deleteTask(taskHandle); // because of the design, deleting the task from
+                              // the task list will add a lot of edge cases to
+                              // deal with, thus a lot code will be added to the scheduler
 
+  __disable_irq(); // in case deleted task is the next to run
   free(taskHandle->stackPt);// only 26byte are left
-
   taskHandle->status = sDeleted;
+  __enable_irq();
+
+  // if the current task deletes itself yield
   if (taskHandle == _sRTOS_CurrentTask)
     sRTOSTaskYield();
 }

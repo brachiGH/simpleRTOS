@@ -10,9 +10,6 @@
 
 
 
-
-
-
 /*
     
 When an interrupt occurs on ARM Cortex-M:
@@ -38,21 +35,13 @@ This ensures the interrupted code resumes correctly after the interrupt.
 .type SysTick_Handler, %function
 SysTick_Handler:                        // r0,r1,r2,r3,r12,lr,pc,psr   saved by interrupt
     cpsid   i                           // disable isr
-    push    {lr}
+    push    {lr}                        // save return address
     ldr     r0, =_sRTOS_CurrentTask     // the _sRTOSSchedulerGetCurrent return the current task (r0 is the return value)
     ldr     r1, [r0]
     bl	    _sRTOSSchedulerGetFirstAvailable //
-    pop     {lr}
-    // r1 = currentTask, r0 = firstAvbleTask
-    cmp     r1, r0                      // check if current and first avaible are the same
-    bne    initSwitchTask
-    // if eq  then exit
-    cpsie   i                           // enable isr  
-    bx      lr                          // return the same task
-
-
-initSwitchTask:
+    pop     {lr}                        // restore return address
     ldr     r3, [r1, #4]                // r3 = CurrentTask->nextTask
+    // r1 = currentTask, r0 = firstAvbleTask, r3 = nextTask
     ldrb    r2, [r0, #10]               // first available task priority
     ldrb    r12, [r3, #10]              // next task priority (next relative to the current task)
     cmp     r2, r12                     // cmp the nextTask and firstAvble priority
@@ -60,10 +49,16 @@ initSwitchTask:
     // if next and firstAvble tasks have the same priority
     // this means the next task should run an equal amout as current and firstAvble
     // note: that firstAvbleTask and nextTask could be the same Task
-    beq    switchToNextTask
-    mov    r3, r0
+    beq    switchToRunningNextTask
+    cmp     r1, r0                      // check if current and first avaible are the same
+    bne    switchToRunningfirstAbleTask
+    // if eq  then exit
+    cpsie   i                           // enable isr  
+    bx      lr                          // return the same task
 
-switchToNextTask:
+switchToRunningfirstAbleTask:
+    mov     r3, r0                      // changes the nextTask pointer to firstAvbleTask pointer
+switchToRunningNextTask:
     push    {r4-r7}                     // save r4,r5,r6,r7,
     stmdb   sp!, {r8-r11}               //      r8,r9,r10,r11
 
@@ -88,7 +83,7 @@ switchToNextTask:
     strb	r0, [r3, #9]                // change next task status to sRunning
 
     ldr     r0, =_sRTOS_CurrentTask
-    str     r3, [r0]                    // save the current task ptr
+    str     r3, [r0]                    // change the current running task ptr
 
     ldrb    r2, [r3, #8]                // nextTask->fps
     cmp     r2, #1                      //

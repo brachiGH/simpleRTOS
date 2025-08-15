@@ -16,6 +16,7 @@
 
 /*************PV*****************/
 sTaskHandle_t *_sRTOS_TaskList;
+sTaskHandle_t *_sRTOS_IdleTask;
 /********************************/
 
 
@@ -116,20 +117,19 @@ sRTOS_StatusTypeDef sRTOSInit(sUBaseType_t BUS_FREQ)
                               // + set clock source to processor clock
   __enable_irq();
 
-  _sRTOS_TaskList = (sTaskHandle_t *)malloc(sizeof(sTaskHandle_t));
-  if (_sRTOS_TaskList == NULL)
+  _sRTOS_IdleTask = (sTaskHandle_t *)malloc(sizeof(sTaskHandle_t));
+  if (_sRTOS_IdleTask == NULL)
   {
     return sRTOS_ALLOCATION_FAILED;
   }
-
-  _sRTOS_TaskList->nextTask = _sRTOS_TaskList; // idle should recall it self when thier is no other task to do
+  _sRTOS_TaskList = _sRTOS_IdleTask; // idle should recall it self when thier is no other task to do
   return sRTOSTaskCreate(_idle,
                          "idle task",
                          NULL,
-                         16,
+                         4,
                          sPriorityIdle,
-                         _sRTOS_TaskList,
-						 srFALSE);
+                         _sRTOS_IdleTask,
+						             srFALSE);
 }
 
 sTaskHandle_t *_sRTOSSchedulerGetFirstAvailable(void)
@@ -144,5 +144,5 @@ sTaskHandle_t *_sRTOSSchedulerGetFirstAvailable(void)
     task = task->nextTask;
   }
 
-  return task;
+  return _sRTOS_IdleTask;
 }
