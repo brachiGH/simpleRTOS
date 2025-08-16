@@ -18,7 +18,6 @@
 #define MIN_STACK_SIZE_FPU 49
 #define MAX_TASK_NAME_LEN 12
 
-
 typedef int32_t sBaseType_t;
 typedef uint32_t sUBaseType_t;
 
@@ -35,6 +34,7 @@ typedef enum
   sRTOS_UNVALID_STACK_SIZE,
   sRTOS_UNVALID_PERIOD,
   sRTOS_ALLOCATION_FAILED,
+  sRTOS_TIMER_LIST_IS_FULL,
 
 } sRTOS_StatusTypeDef;
 
@@ -49,7 +49,7 @@ typedef enum
   sPriorityRealtime = +3
 } sPriority_t;
 
-typedef enum 
+typedef enum
 {
   sBlocked,
   sRunning,
@@ -58,11 +58,11 @@ typedef enum
   sDeleted
 } sTaskStatus_t;
 
-__attribute__((packed, aligned(4))) struct tcb 
+__attribute__((packed, aligned(4))) struct tcb
 {
   sUBaseType_t *stackPt;
   struct tcb *nextTask;
-  sbool_t fps;     // floating-point state
+  sbool_t fps; // floating-point state
   sTaskStatus_t status;
   sPriority_t priority;
   sUBaseType_t *stackBase;
@@ -73,10 +73,12 @@ typedef struct tcb sTaskHandle_t;
 
 typedef struct __attribute__((packed, aligned(4)))
 {
-  sUBaseType_t *stackPt;   // Pointer to the stack
+  sUBaseType_t *stackBase; // Pointer to the stack
   sUBaseType_t id;         // Timer id
   sUBaseType_t Period;     // Timer period (the period is relative to __sRTOS_SENSIBILITY)
+  sUBaseType_t ticksElapsed;
   sbool_t autoReload; // Timer autoReload
+  sTaskStatus_t status;
 } sTimerHandle_t;
 
 typedef void (*sTaskFunc_t)(void *arg);

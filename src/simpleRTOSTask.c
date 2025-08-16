@@ -15,9 +15,9 @@ extern void _insertTask(sTaskHandle_t *task);
 sTaskHandle_t *_sRTOS_CurrentTask;
 
 sUBaseType_t *_taskInitStack(sTaskFunc_t taskFunc, void *arg,
-                               sUBaseType_t stacksize, sUBaseType_t fpsMode)
+                             sUBaseType_t stacksize, sUBaseType_t fpsMode)
 {
-  stacksize = ((fpsMode == srFALSE)?  MIN_STACK_SIZE_NO_FPU : MIN_STACK_SIZE_FPU) + stacksize;
+  stacksize = ((fpsMode == srFALSE) ? MIN_STACK_SIZE_NO_FPU : MIN_STACK_SIZE_FPU) + stacksize;
   sUBaseType_t *stack = (sUBaseType_t *)malloc(sizeof(sUBaseType_t) * (stacksize));
   if (stack == NULL)
     return NULL;
@@ -35,18 +35,18 @@ sUBaseType_t *_taskInitStack(sTaskFunc_t taskFunc, void *arg,
 */
 
   stack[stacksize - 8] = (sUBaseType_t)arg; // R0
-  stack[stacksize - 3] = 0xFFFFFFFF; // LR
+  stack[stacksize - 3] = 0xFFFFFFFF;        // LR
   // The task address is set in the PC register
   stack[stacksize - 2] = (sUBaseType_t)(taskFunc); // PC
   // set to Thumb mode
   stack[stacksize - 1] = 0x01000000; // xPSR
 
 #ifdef DEBUG
-  stack[stacksize - 7] = 0x11111112; // R1
-  stack[stacksize - 6] = 0x22222223; // R2
-  stack[stacksize - 5] = 0x33333334; // R3
-  stack[stacksize - 4] = 0xCCCCCCCE; // R12
-  stack[stacksize - 9] = 0x77777778; // r7
+  stack[stacksize - 7] = 0x11111112;  // R1
+  stack[stacksize - 6] = 0x22222223;  // R2
+  stack[stacksize - 5] = 0x33333334;  // R3
+  stack[stacksize - 4] = 0xCCCCCCCE;  // R12
+  stack[stacksize - 9] = 0x77777778;  // r7
   stack[stacksize - 10] = 0x66666667; // r6
   stack[stacksize - 11] = 0x55555556; // r5
   stack[stacksize - 12] = 0x44444445; // r4
@@ -85,8 +85,8 @@ sRTOS_StatusTypeDef sRTOSTaskCreate(
    *
    * Systic (interrupt handler) pushes registers (r4–r11).
    */
-  taskHandle->stackPt = (sUBaseType_t *)(stack+ stacksizeWords); // stack pointer, after stack frame
-                                                                 // is saved onto the same stack
+  taskHandle->stackPt = (sUBaseType_t *)(stack + stacksizeWords); // stack pointer, after stack frame
+                                                                  // is saved onto the same stack
   taskHandle->nextTask = NULL;
   taskHandle->status = sReady;
   taskHandle->fps = (sbool_t)fpsMode;
@@ -110,8 +110,8 @@ void sRTOSTaskStop(sTaskHandle_t *taskHandle)
 /*
  * will yeild if the priority of the current running Task is lower
  * then the started Task
-*/
-void sRTOSTaskStart(sTaskHandle_t *taskHandle)
+ */
+void sRTOSTaskResume(sTaskHandle_t *taskHandle)
 {
   if (taskHandle->status != sDeleted)
     taskHandle->status = sReady;
@@ -120,14 +120,15 @@ void sRTOSTaskStart(sTaskHandle_t *taskHandle)
     sRTOSTaskYield();
 }
 
+// if provided a none existing taskHandle nothing happens
 void sRTOSTaskDelete(sTaskHandle_t *taskHandle)
 {
   // _deleteTask(taskHandle); // because of the design, deleting the task from
-                              // the task list will add a lot of edge cases to
-                              // deal with, thus a lot code will be added to the scheduler
+  // the task list will add a lot of edge cases to
+  // deal with, thus a lot code will be added to the scheduler
 
-  __sDisable_irq(); // in case deleted task is the next to run
-  free(taskHandle->stackBase);// only 26byte are left
+  __sDisable_irq();            // in case deleted task is the next to run
+  free(taskHandle->stackBase); // only 26byte are left
   taskHandle->status = sDeleted;
   taskHandle->stackBase = NULL;
   taskHandle->stackPt = NULL;
@@ -138,8 +139,7 @@ void sRTOSTaskDelete(sTaskHandle_t *taskHandle)
     sRTOSTaskYield();
 }
 
-
-void sRTOSDelay(sUBaseType_t duration_ms)
+// only works on task not timers
+void sRTOSTaskDelay(sUBaseType_t duration_ms)
 {
-  
 }

@@ -18,7 +18,7 @@
  */
 __attribute__((always_inline)) static __inline void __sDisable_irq(void)
 {
-  __asm volatile ("cpsid i" : : : "memory");
+  __asm volatile("cpsid i" : : : "memory");
 }
 
 /**
@@ -28,12 +28,11 @@ __attribute__((always_inline)) static __inline void __sDisable_irq(void)
  */
 __attribute__((always_inline)) static __inline void __sEnable_irq(void)
 {
-  __asm volatile ("cpsie i" : : : "memory");
+  __asm volatile("cpsie i" : : : "memory");
 }
 
 extern void SysTick_Handler(void);
 void SVC_Handler(void);
-
 
 sRTOS_StatusTypeDef sRTOSInit(sUBaseType_t BUS_FREQ);
 extern void sRTOSStartScheduler(void);
@@ -47,14 +46,14 @@ sRTOS_StatusTypeDef sRTOSTaskCreate(
     sTaskHandle_t *taskHandle,
     sUBaseType_t fpsMode);
 void sRTOSTaskStop(sTaskHandle_t *taskHandle);
-void sRTOSTaskStart(sTaskHandle_t *taskHandle);
+void sRTOSTaskResume(sTaskHandle_t *taskHandle);
 void sRTOSTaskDelete(sTaskHandle_t *taskHandle);
+void sRTOSTaskDelay(sUBaseType_t duration_ms);
 
 __attribute__((always_inline)) static __inline void sRTOSTaskYield(void)
 {
   // __ICSR = (1u << 26); // changes SysTick exception state to pending
   __asm volatile("svc #0");
-
 }
 
 sRTOS_StatusTypeDef sRTOSTimerCreate(
@@ -64,8 +63,10 @@ sRTOS_StatusTypeDef sRTOSTimerCreate(
     sUBaseType_t autoReload,
     sTimerHandle_t *timerHandle,
     sUBaseType_t fpsMode);
+void sRTOSTimerStop(sTimerHandle_t *timerHandle);
+void sRTOSTimerResume(sTimerHandle_t *timerHandle);
 void sRTOSTimerDelete(sTimerHandle_t *timerHandle);
-void sRTOSTimerUpdatePeriode(sTimerHandle_t *timerHandle);
+void sRTOSTimerUpdatePeriode(sTimerHandle_t *timerHandle, sUBaseType_t period);
 
 void sRTOSSemaphoreCreate(sSemaphore_t *sem, sBaseType_t n);
 void sRTOSSemaphoreGive();
@@ -74,7 +75,5 @@ void sRTOSSemaphoreTake();
 void sRTOSMutexCreate(sSemaphore_t *sem);
 void sRTOSMutexGive();
 void sRTOSMutexTake();
-
-void sRTOSDelay(sUBaseType_t duration_ms);
 
 #endif /* SIMPLERTOS_H_ */
