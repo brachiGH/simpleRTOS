@@ -19,12 +19,14 @@ extern void sTimer_Handler(void);
 __attribute__((naked)) void SysTick_Handler(void)
 {
   _sTickCount++;
+
+  __asm volatile(
+      "b sTimer_Handler" ::: "memory");
+
   if (_sTickCount % __sQUANTA == 0 && !_sIsTimerRunning)
     __asm volatile(
         "b sScheduler_Handler\n" ::: "memory");
 
-  __asm volatile(
-      "b sTimer_Handler" ::: "memory");
 }
 
 __attribute__((naked)) void SVC_Handler(void)

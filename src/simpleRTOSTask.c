@@ -21,8 +21,8 @@ __STATIC_NAKED__ void _taskReturn(void *)
   }
 }
 
-sUBaseType_t *_taskInitStack(sTaskFunc_t taskFunc, void *arg,
-                             sUBaseType_t stacksize, sTaskFunc_t returnFunc, sUBaseType_t fpsMode)
+static sUBaseType_t *_taskInitStack(sTaskFunc_t taskFunc, void *arg,
+                             sUBaseType_t stacksize, sUBaseType_t fpsMode)
 {
   stacksize = ((fpsMode == srFALSE) ? MIN_STACK_SIZE_NO_FPU : MIN_STACK_SIZE_FPU) + stacksize;
   sUBaseType_t *stack = (sUBaseType_t *)malloc(sizeof(sUBaseType_t) * (stacksize));
@@ -42,7 +42,7 @@ sUBaseType_t *_taskInitStack(sTaskFunc_t taskFunc, void *arg,
 */
 
   stack[stacksize - 8] = (sUBaseType_t)arg;        // R0
-  stack[stacksize - 3] = (sUBaseType_t)returnFunc; // LR
+  stack[stacksize - 3] = (sUBaseType_t)(_taskReturn); // LR
   // The task address is set in the PC register
   stack[stacksize - 2] = (sUBaseType_t)(taskFunc); // PC
   // set to Thumb mode
@@ -82,7 +82,7 @@ sRTOS_StatusTypeDef sRTOSTaskCreate(
     sTaskHandle_t *taskHandle,
     sUBaseType_t fpsMode)
 {
-  sUBaseType_t *stack = _taskInitStack(taskFunc, arg, stacksizeWords, _taskReturn, fpsMode);
+  sUBaseType_t *stack = _taskInitStack(taskFunc, arg, stacksizeWords, fpsMode);
   if (stack == NULL)
     return sRTOS_ALLOCATION_FAILED;
 

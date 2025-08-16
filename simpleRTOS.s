@@ -64,7 +64,7 @@ switchToRunningfirstAbleTask:
 switchToRunningNextTask:
     ldrb    r0, [r1, #11]               // read current saveRegiters
     cmp     r0, #1                      // check if the task has to save regiters
-    bne     1f
+    bne     2f
     mov     r0, #0
     strb	r0, [r1, #11]               // change current saveRegiters to false (to tell the scheduler that registers are saved)
     ldrb    r0, [r1, #9]                // read current status
@@ -82,6 +82,7 @@ switchToRunningNextTask:
     push    {r0}                        //
 1:
     str     sp, [r1]                    // save the new current task sp
+2:
     ldr     sp, [r3]                    // SP = nextTask->stackPt
     ldr	    r0, =0x1                    // sRunning:0x1
     strb	r0, [r3, #9]                // change next task status to sRunning
@@ -91,11 +92,11 @@ switchToRunningNextTask:
 
     ldrb    r2, [r3, #8]                // nextTask->fps
     cmp     r2, #1                      //
-    bne     2f                          //
+    bne     3f                          //
     pop     {r0}                        // if float point mode is on restore fpu registers of the next task
     vmsr    fpscr, r0                   //
     vldmia  sp!, {s0-s31}               //
-2:
+3:
     ldmia   sp!, {r8-r11}               //
     pop     {r4-r7}                     //
     mov     r0, #1
@@ -159,7 +160,7 @@ sTimer_Handler:                         // r0,r1,r2,r3,r12,lr,pc,psr   saved by 
     ldr     r1, [r2]
     ldrb    r3, [r1, #11]               // read current saveRegiters
     cmp     r3, #1                      // check if the task has to save regiters
-    bne     2
+    bne     3f
     mov     r3, #0
     strb	r3, [r1, #11]               // change current saveRegiters to false (to tell the scheduler that registers are saved)
     ldrb    r3, [r1, #9]                // read current status
@@ -177,6 +178,7 @@ sTimer_Handler:                         // r0,r1,r2,r3,r12,lr,pc,psr   saved by 
     push    {r3}                        //
 2:
     str     sp, [r1]                    // save the new current task sp
+3:
     ldr     sp, [r0]                    // SP = Timer Task
     cpsie   i                           // enable isr  
     bx      lr                          // return and start the next task

@@ -17,6 +17,7 @@
 #define srFALSE 0u
 #define srTRUE 1u
 
+#define CONTEXT_STACK_SIZE 8
 #define MIN_STACK_SIZE_NO_FPU 16
 #define MIN_STACK_SIZE_FPU 49
 #define MAX_TASK_NAME_LEN 12
@@ -82,8 +83,8 @@ typedef struct __attribute__((packed, aligned(4)))
   sUBaseType_t *stackPt;   // Pointer to the stack
   sUBaseType_t *stackBase; // Pointer to the Base of the stack
   sUBaseType_t id;         // Timer id
-  sUBaseType_t Period;     // Timer period (the period is relative to __sRTOS_SENSIBILITY)
-  sUBaseType_t ticksElapsed;
+  sBaseType_t Period;     // Timer period (the period is relative to __sRTOS_SENSIBILITY)
+  sBaseType_t ticksElapsed;
   sbool_t autoReload; // Timer autoReload
   sTaskStatus_t status;
 } sTimerHandle_t;

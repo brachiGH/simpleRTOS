@@ -60,13 +60,13 @@ __attribute__((always_inline)) static __inline void sRTOSTaskYield(void)
 sRTOS_StatusTypeDef sRTOSTimerCreate(
     sTimerFunc_t timerTask,
     sUBaseType_t id,
-    sUBaseType_t period,
+    sBaseType_t period,
     sUBaseType_t autoReload,
     sTimerHandle_t *timerHandle);
 void sRTOSTimerStop(sTimerHandle_t *timerHandle);
 void sRTOSTimerResume(sTimerHandle_t *timerHandle);
 void sRTOSTimerDelete(sTimerHandle_t *timerHandle);
-void sRTOSTimerUpdatePeriode(sTimerHandle_t *timerHandle, sUBaseType_t period);
+void sRTOSTimerUpdatePeriode(sTimerHandle_t *timerHandle, sBaseType_t period);
 
 void sRTOSSemaphoreCreate(sSemaphore_t *sem, sBaseType_t n);
 void sRTOSSemaphoreGive();
