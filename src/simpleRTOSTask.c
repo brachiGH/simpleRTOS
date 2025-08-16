@@ -105,6 +105,15 @@ sRTOS_StatusTypeDef sRTOSTaskCreate(
   return sRTOS_OK;
 }
 
+void sRTOSTaskUpdatePriority(sTaskHandle_t *taskHandle, sPriority_t priority)
+{
+  __sDisable_irq();
+  _deleteTask(taskHandle);
+  taskHandle->priority = priority;
+  _insertTask(taskHandle);
+  __sEnable_irq();
+}
+
 void sRTOSTaskStop(sTaskHandle_t *taskHandle)
 {
   if (taskHandle->status != sDeleted && taskHandle->status != sBlocked)
