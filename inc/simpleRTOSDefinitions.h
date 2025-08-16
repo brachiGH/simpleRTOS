@@ -75,7 +75,7 @@ typedef struct __attribute__((packed, aligned(4)))
 {
   sUBaseType_t *stackPt;   // Pointer to the stack
   sUBaseType_t id;         // Timer id
-  sUBaseType_t Period;     // Timer period (in QUANTA)
+  sUBaseType_t Period;     // Timer period (the period is relative to __sRTOS_SENSIBILITY)
   sbool_t autoReload; // Timer autoReload
 } sTimerHandle_t;
 

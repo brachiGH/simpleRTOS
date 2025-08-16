@@ -5,7 +5,7 @@
 .extern _sRTOS_TaskList
 .extern _sRTOS_CurrentTask
 .extern _sRTOSSchedulerGetFirstAvailable
-.global SysTick_Handler
+.global sScheduler_Handler
 .global sRTOSStartScheduler
 
 
@@ -31,9 +31,9 @@ Hardware saves core registers automatically; software can save more if needed.
 This ensures the interrupted code resumes correctly after the interrupt.
     
 */
-.section .text.SysTick_Handler,"ax",%progbits
-.type SysTick_Handler, %function
-SysTick_Handler:                        // r0,r1,r2,r3,r12,lr,pc,psr   saved by interrupt
+.section .text.sScheduler_Handler,"ax",%progbits
+.type sScheduler_Handler, %function
+sScheduler_Handler:                     // r0,r1,r2,r3,r12,lr,pc,psr   saved by interrupt
     cpsid   i                           // disable isr
     push    {lr}                        // save return address
     ldr     r0, =_sRTOS_CurrentTask     // the _sRTOSSchedulerGetCurrent return the current task (r0 is the return value)
@@ -96,7 +96,7 @@ switchToRunningNextTask:
     pop     {r4-r7}                     //
     cpsie   i                           // enable isr  
     bx      lr                          // return and start the next task
-.size SysTick_Handler, .-SysTick_Handler
+.size sScheduler_Handler, .-sScheduler_Handler
 
 /*
 When returning from an interrupt on ARM Cortex-M, **context restore**
@@ -135,7 +135,6 @@ as if nothing happened.
 .section .text.sRTOSStartScheduler,"ax",%progbits
 .type sRTOSStartScheduler, %function
 sRTOSStartScheduler:
-    cpsid   i                           // disable isr
     ldr     r0, =_sRTOS_TaskList                //
     ldr     r2, [r0]                            //
     ldr     sp, [r2]                            //
@@ -157,6 +156,6 @@ sRTOSStartScheduler:
     strb	r1, [r2, #9]                       // change task status to sRunning
     ldr     r0, =_sRTOS_CurrentTask
     str     r2, [r0]                            // save the current task ptr
-    cpsie   i
+    cpsie   i                                   // enable irq (disabled by the sRTOSInit)
     bx      lr
 .size sRTOSStartScheduler, .-sRTOSStartScheduler

@@ -95,11 +95,11 @@ freeTask:
 sRTOS_StatusTypeDef sRTOSInit(sUBaseType_t BUS_FREQ)
 {
   __sDisable_irq();
-  uint32_t MILLIS_PRESCALER = (BUS_FREQ / 1000);
+  uint32_t PRESCALER = (BUS_FREQ / __sRTOS_SENSIBILITY);
 
   SYST_CSR = 0;                                  // disable Systic timer
-  SYST_CVR = 0;                                   // set value to 0
-  SYST_RVR = (__sQUANTA_MS * MILLIS_PRESCALER) - 1; // the value start counting from 0
+  SYST_CVR = 0;                                  // set value to 0
+  SYST_RVR = (PRESCALER) - 1; // the value start counting from 0
   /*
    * This makes SysTick the second least urgent interrupt after PendSV,
         (PendSV:
@@ -117,7 +117,6 @@ sRTOS_StatusTypeDef sRTOSInit(sUBaseType_t BUS_FREQ)
 
   SYST_CSR = 0x00000007; // enable clock + Enables SysTick exception request
                               // + set clock source to processor clock
-  __sEnable_irq();
 
   _sRTOS_IdleTask = (sTaskHandle_t *)malloc(sizeof(sTaskHandle_t));
   if (_sRTOS_IdleTask == NULL)

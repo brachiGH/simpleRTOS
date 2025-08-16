@@ -50,9 +50,11 @@ void sRTOSTaskStop(sTaskHandle_t *taskHandle);
 void sRTOSTaskStart(sTaskHandle_t *taskHandle);
 void sRTOSTaskDelete(sTaskHandle_t *taskHandle);
 
-static inline void sRTOSTaskYield(void)
+__attribute__((always_inline)) static __inline void sRTOSTaskYield(void)
 {
-  __ICSR = (1u << 26); // changes SysTick exception state to pending
+  // __ICSR = (1u << 26); // changes SysTick exception state to pending
+  __asm volatile("svc #0");
+
 }
 
 sRTOS_StatusTypeDef sRTOSTimerCreate(
@@ -73,6 +75,6 @@ void sRTOSMutexCreate(sSemaphore_t *sem);
 void sRTOSMutexGive();
 void sRTOSMutexTake();
 
-void sRTOSDelay(sUBaseType_t duration_quanta);
+void sRTOSDelay(sUBaseType_t duration_ms);
 
 #endif /* SIMPLERTOS_H_ */
