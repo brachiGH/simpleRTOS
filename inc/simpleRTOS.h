@@ -16,7 +16,7 @@
   \details Disables IRQ interrupts by setting the I-bit in the CPSR.
   Can only be executed in Privileged modes.
  */
-__STATIC_FORCEINLINE void __sDisable_irq(void)
+__STATIC_FORCEINLINE__ void __sDisable_irq(void)
 {
   __asm volatile("cpsid i" : : : "memory");
 }
@@ -26,7 +26,7 @@ __STATIC_FORCEINLINE void __sDisable_irq(void)
   \details Enables IRQ interrupts by clearing the I-bit in the CPSR.
            Can only be executed in Privileged modes.
  */
-__STATIC_FORCEINLINE void __sEnable_irq(void)
+__STATIC_FORCEINLINE__ void __sEnable_irq(void)
 {
   __asm volatile("cpsie i" : : : "memory");
 }

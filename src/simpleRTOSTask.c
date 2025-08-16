@@ -14,7 +14,7 @@ extern void _insertTask(sTaskHandle_t *task);
 
 sTaskHandle_t *_sRTOS_CurrentTask;
 
-__STATIC_NAKED void _taskReturn(void *)
+__STATIC_NAKED__ void _taskReturn(void *)
 {
   for (;;)
   {

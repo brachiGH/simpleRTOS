@@ -11,8 +11,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define __STATIC_FORCEINLINE __attribute__((always_inline)) static __inline 
-#define __STATIC_NAKED __attribute__((naked)) static
+#define __STATIC_FORCEINLINE__ __attribute__((always_inline)) static __inline 
+#define __STATIC_NAKED__ __attribute__((naked)) static
 
 #define srFALSE 0u
 #define srTRUE 1u

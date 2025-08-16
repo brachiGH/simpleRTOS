@@ -16,7 +16,7 @@ extern sUBaseType_t _sIsTimerRunning;
 extern sUBaseType_t *_taskInitStack(sTaskFunc_t taskFunc, void *arg,
                                     sUBaseType_t stacksize, sTaskFunc_t returnFunc, sUBaseType_t fpsMode);
 
-__STATIC_NAKED void _timerReturn(void *)
+__STATIC_NAKED__ void _timerReturn(void *)
 {
   _sIsTimerRunning = 0;
   sRTOSTaskYield();
