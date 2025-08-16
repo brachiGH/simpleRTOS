@@ -14,8 +14,15 @@ extern void _insertTask(sTaskHandle_t *task);
 
 sTaskHandle_t *_sRTOS_CurrentTask;
 
+__STATIC_NAKED void _taskReturn(void *)
+{
+  for (;;)
+  {
+  }
+}
+
 sUBaseType_t *_taskInitStack(sTaskFunc_t taskFunc, void *arg,
-                             sUBaseType_t stacksize, sUBaseType_t fpsMode)
+                             sUBaseType_t stacksize, sTaskFunc_t returnFunc, sUBaseType_t fpsMode)
 {
   stacksize = ((fpsMode == srFALSE) ? MIN_STACK_SIZE_NO_FPU : MIN_STACK_SIZE_FPU) + stacksize;
   sUBaseType_t *stack = (sUBaseType_t *)malloc(sizeof(sUBaseType_t) * (stacksize));
@@ -34,8 +41,8 @@ sUBaseType_t *_taskInitStack(sTaskFunc_t taskFunc, void *arg,
       xPSR (program status register)
 */
 
-  stack[stacksize - 8] = (sUBaseType_t)arg; // R0
-  stack[stacksize - 3] = 0xFFFFFFFF;        // LR
+  stack[stacksize - 8] = (sUBaseType_t)arg;        // R0
+  stack[stacksize - 3] = (sUBaseType_t)returnFunc; // LR
   // The task address is set in the PC register
   stack[stacksize - 2] = (sUBaseType_t)(taskFunc); // PC
   // set to Thumb mode
@@ -75,7 +82,7 @@ sRTOS_StatusTypeDef sRTOSTaskCreate(
     sTaskHandle_t *taskHandle,
     sUBaseType_t fpsMode)
 {
-  sUBaseType_t *stack = _taskInitStack(taskFunc, arg, stacksizeWords, fpsMode);
+  sUBaseType_t *stack = _taskInitStack(taskFunc, arg, stacksizeWords, _taskReturn, fpsMode);
   if (stack == NULL)
     return sRTOS_ALLOCATION_FAILED;
 
@@ -89,6 +96,7 @@ sRTOS_StatusTypeDef sRTOSTaskCreate(
                                                                   // is saved onto the same stack
   taskHandle->nextTask = NULL;
   taskHandle->status = sReady;
+  taskHandle->saveRegiters = srTrue;
   taskHandle->fps = (sbool_t)fpsMode;
   taskHandle->priority = priority;
   strncpy(taskHandle->name, name, MAX_TASK_NAME_LEN);
@@ -99,12 +107,19 @@ sRTOS_StatusTypeDef sRTOSTaskCreate(
 
 void sRTOSTaskStop(sTaskHandle_t *taskHandle)
 {
-  if (taskHandle->status != sDeleted)
+  if (taskHandle->status != sDeleted && taskHandle->status != sBlocked)
+  {
+    __sDisable_irq();
     taskHandle->status = sBlocked;
 
-  // if the current task deletes itself yield
-  if (taskHandle == _sRTOS_CurrentTask)
-    sRTOSTaskYield();
+    if (taskHandle == _sRTOS_CurrentTask)
+    {
+      __sEnable_irq();
+      sRTOSTaskYield(); // if the current task deletes itself yield
+      return;
+    }
+    __sEnable_irq();
+  }
 }
 
 /*
@@ -113,11 +128,19 @@ void sRTOSTaskStop(sTaskHandle_t *taskHandle)
  */
 void sRTOSTaskResume(sTaskHandle_t *taskHandle)
 {
-  if (taskHandle->status != sDeleted)
+  if (taskHandle->status != sDeleted && taskHandle->status != sReady)
+  {
+    __sDisable_irq();
     taskHandle->status = sReady;
 
-  if (taskHandle->priority > _sRTOS_CurrentTask->priority)
-    sRTOSTaskYield();
+    if (taskHandle->priority > _sRTOS_CurrentTask->priority)
+    {
+      __sEnable_irq();
+      sRTOSTaskYield();
+      return;
+    }
+    __sEnable_irq();
+  }
 }
 
 // if provided a none existing taskHandle nothing happens
@@ -132,11 +155,16 @@ void sRTOSTaskDelete(sTaskHandle_t *taskHandle)
   taskHandle->status = sDeleted;
   taskHandle->stackBase = NULL;
   taskHandle->stackPt = NULL;
-  __sEnable_irq();
-
+  taskHandle->saveRegiters = srFALSE;
   // if the current task deletes itself yield
   if (taskHandle == _sRTOS_CurrentTask)
+  {
+    __sEnable_irq();
     sRTOSTaskYield();
+    return;
+  }
+
+  __sEnable_irq();
 }
 
 // only works on task not timers

@@ -16,7 +16,7 @@
   \details Disables IRQ interrupts by setting the I-bit in the CPSR.
   Can only be executed in Privileged modes.
  */
-__attribute__((always_inline)) static __inline void __sDisable_irq(void)
+__STATIC_FORCEINLINE void __sDisable_irq(void)
 {
   __asm volatile("cpsid i" : : : "memory");
 }
@@ -26,7 +26,7 @@ __attribute__((always_inline)) static __inline void __sDisable_irq(void)
   \details Enables IRQ interrupts by clearing the I-bit in the CPSR.
            Can only be executed in Privileged modes.
  */
-__attribute__((always_inline)) static __inline void __sEnable_irq(void)
+__STATIC_FORCEINLINE void __sEnable_irq(void)
 {
   __asm volatile("cpsie i" : : : "memory");
 }
@@ -45,6 +45,7 @@ sRTOS_StatusTypeDef sRTOSTaskCreate(
     sPriority_t priority,
     sTaskHandle_t *taskHandle,
     sUBaseType_t fpsMode);
+void sRTOSTaskUpdatePriority(sTaskHandle_t *taskHandle, sPriority_t priority);
 void sRTOSTaskStop(sTaskHandle_t *taskHandle);
 void sRTOSTaskResume(sTaskHandle_t *taskHandle);
 void sRTOSTaskDelete(sTaskHandle_t *taskHandle);
@@ -61,8 +62,7 @@ sRTOS_StatusTypeDef sRTOSTimerCreate(
     sUBaseType_t id,
     sUBaseType_t period,
     sUBaseType_t autoReload,
-    sTimerHandle_t *timerHandle,
-    sUBaseType_t fpsMode);
+    sTimerHandle_t *timerHandle);
 void sRTOSTimerStop(sTimerHandle_t *timerHandle);
 void sRTOSTimerResume(sTimerHandle_t *timerHandle);
 void sRTOSTimerDelete(sTimerHandle_t *timerHandle);

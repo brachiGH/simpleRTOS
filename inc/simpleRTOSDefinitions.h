@@ -11,6 +11,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#define __STATIC_FORCEINLINE __attribute__((always_inline)) static __inline 
+#define __STATIC_NAKED __attribute__((naked)) static
+
 #define srFALSE 0u
 #define srTRUE 1u
 
@@ -38,7 +41,7 @@ typedef enum
 
 } sRTOS_StatusTypeDef;
 
-typedef enum
+enum
 {
   sPriorityIdle = -3,
   sPriorityLow = -2,
@@ -47,7 +50,9 @@ typedef enum
   sPriorityAboveNormal = +1,
   sPriorityHigh = +2,
   sPriorityRealtime = +3
-} sPriority_t;
+};
+
+typedef signed char sPriority_t;
 
 typedef enum
 {
@@ -65,6 +70,7 @@ __attribute__((packed, aligned(4))) struct tcb
   sbool_t fps; // floating-point state
   sTaskStatus_t status;
   sPriority_t priority;
+  sbool_t saveRegiters;  // tells the scheduler to save the registers if true
   sUBaseType_t *stackBase;
   char name[12];
 };
@@ -73,7 +79,8 @@ typedef struct tcb sTaskHandle_t;
 
 typedef struct __attribute__((packed, aligned(4)))
 {
-  sUBaseType_t *stackBase; // Pointer to the stack
+  sUBaseType_t *stackPt;   // Pointer to the stack
+  sUBaseType_t *stackBase; // Pointer to the Base of the stack
   sUBaseType_t id;         // Timer id
   sUBaseType_t Period;     // Timer period (the period is relative to __sRTOS_SENSIBILITY)
   sUBaseType_t ticksElapsed;
