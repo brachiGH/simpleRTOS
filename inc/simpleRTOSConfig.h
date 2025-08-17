@@ -1,5 +1,5 @@
 /*
- * simpleRTOSTypes.h
+ * simpleRTOSConfig.h
  *
  *  Created on: Aug 14, 2025
  *      Author: brachiGH
