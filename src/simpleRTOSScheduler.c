@@ -111,9 +111,7 @@ sRTOS_StatusTypeDef sRTOSInit(sUBaseType_t BUS_FREQ)
   v &= ~(0xFFu << 16 | 0xFFu << 24);  // PendSV: lowest
   v |= (0xFFu << 16) | (0xFEu << 24); // SysTic: just above PendSV
   SYSPRI3 = v;
-
-  SYST_CSR = 0x00000007; // enable clock + Enables SysTick exception request
-                         // + set clock source to processor clock
+  __sEnable_irq();
 
   _sRTOS_IdleTask = (sTaskHandle_t *)malloc(sizeof(sTaskHandle_t));
   if (_sRTOS_IdleTask == NULL)
