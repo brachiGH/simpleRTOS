@@ -58,7 +58,7 @@ void _insertTask(sTaskHandle_t *task)
 
   currentTask->nextTask = task;
   task->nextTask = NULL;
-  __sCriticalRegionEnc();
+  __sCriticalRegionEnd();
 }
 
 void _deleteTask(sTaskHandle_t *task)
@@ -85,7 +85,7 @@ void _deleteTask(sTaskHandle_t *task)
 freeTask:
   free(task->stackPt);
   free(task);
-  __sCriticalRegionEnc();
+  __sCriticalRegionEnd();
   return;
 }
 
@@ -111,7 +111,7 @@ sRTOS_StatusTypeDef sRTOSInit(sUBaseType_t BUS_FREQ)
   v &= ~(0xFFu << 16 | 0xFFu << 24);  // PendSV: lowest
   v |= (0xFFu << 16) | (0xFEu << 24); // SysTic: just above PendSV
   SYSPRI3 = v;
-  __sCriticalRegionEnc();
+  __sCriticalRegionEnd();
 
   _sRTOS_IdleTask = (sTaskHandle_t *)malloc(sizeof(sTaskHandle_t));
   if (_sRTOS_IdleTask == NULL)

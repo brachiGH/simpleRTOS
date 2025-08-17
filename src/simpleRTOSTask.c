@@ -112,7 +112,7 @@ void sRTOSTaskUpdatePriority(sTaskHandle_t *taskHandle, sPriority_t priority)
   _deleteTask(taskHandle);
   taskHandle->priority = priority;
   _insertTask(taskHandle);
-  __sCriticalRegionEnc();
+  __sCriticalRegionEnd();
 }
 
 void sRTOSTaskStop(sTaskHandle_t *taskHandle)
@@ -124,11 +124,11 @@ void sRTOSTaskStop(sTaskHandle_t *taskHandle)
 
     if (taskHandle == _sRTOS_CurrentTask)
     {
-      __sCriticalRegionEnc();
+      __sCriticalRegionEnd();
       sRTOSTaskYield(); // if the current task deletes itself yield
       return;
     }
-    __sCriticalRegionEnc();
+    __sCriticalRegionEnd();
   }
 }
 
@@ -145,11 +145,11 @@ void sRTOSTaskResume(sTaskHandle_t *taskHandle)
 
     if (taskHandle->priority > _sRTOS_CurrentTask->priority)
     {
-      __sCriticalRegionEnc();
+      __sCriticalRegionEnd();
       sRTOSTaskYield();
       return;
     }
-    __sCriticalRegionEnc();
+    __sCriticalRegionEnd();
   }
 }
 
@@ -169,12 +169,12 @@ void sRTOSTaskDelete(sTaskHandle_t *taskHandle)
   // if the current task deletes itself yield
   if (taskHandle == _sRTOS_CurrentTask)
   {
-    __sCriticalRegionEnc();
+    __sCriticalRegionEnd();
     sRTOSTaskYield();
     return;
   }
 
-  __sCriticalRegionEnc();
+  __sCriticalRegionEnd();
 }
 
 // only works on task not timers

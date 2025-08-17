@@ -28,7 +28,7 @@ __STATIC_FORCEINLINE__ void __sCriticalRegionBegin(void)
   @attention Enables IRQ interrupts by clearing the I-bit in the CPSR.
              Can only be executed in Privileged modes.
  */
-__STATIC_FORCEINLINE__ void __sCriticalRegionEnc(void)
+__STATIC_FORCEINLINE__ void __sCriticalRegionEnd(void)
 {
   __asm volatile("cpsie i" : : : "memory");
 }

@@ -93,7 +93,7 @@ void sRTOSSemaphoreGive(sSemaphore_t *sem)
 {
   __sCriticalRegionBegin();
   (*sem)++;
-  __sCriticalRegionEnc();
+  __sCriticalRegionEnd();
 }
 
 sbool_t sRTOSSemaphoreTake(sSemaphore_t *sem, sUBaseType_t timeoutTicks)
@@ -102,16 +102,16 @@ sbool_t sRTOSSemaphoreTake(sSemaphore_t *sem, sUBaseType_t timeoutTicks)
   __sCriticalRegionBegin();
   while (*sem <= 0)
   {
-    __sCriticalRegionEnc();
+    __sCriticalRegionEnd();
     if (_sTickCount >= timeoutAfter)
     {
       return srFalse;
     }
-    __sCriticalRegionEnc();
+    __sCriticalRegionEnd();
   }
 
   (*sem)--;
-  __sCriticalRegionEnc();
+  __sCriticalRegionEnd();
   return srTrue;
 }
 
@@ -121,17 +121,17 @@ sbool_t sRTOSSemaphoreCooperativeTake(sSemaphore_t *sem, sUBaseType_t timeoutTic
   __sCriticalRegionBegin();
   while (*sem <= 0)
   {
-    __sCriticalRegionEnc();
+    __sCriticalRegionEnd();
     if (_sTickCount >= timeoutAfter)
     {
       return srFalse;
     }
     sRTOSTaskYield();
-    __sCriticalRegionEnc();
+    __sCriticalRegionEnd();
   }
 
   (*sem)--;
-  __sCriticalRegionEnc();
+  __sCriticalRegionEnd();
   return srTrue;
 }
 
@@ -149,7 +149,7 @@ sbool_t sRTOSMutexGive(sMutex_t *mux)
   __sCriticalRegionBegin();
   waitingForMutexGive_add(mux->requesterHandle, _sRTOS_CurrentTask->priority);
   mux->sem++;
-  __sCriticalRegionEnc();
+  __sCriticalRegionEnd();
   sRTOSTaskYield();
   return srTrue;
 }
@@ -162,7 +162,7 @@ sbool_t sRTOSMutexGiveFromISR(sMutex_t *mux)
   __sCriticalRegionBegin();
   waitingForMutexGive_add(mux->requesterHandle, sPriorityRealtime);
   mux->sem++;
-  __sCriticalRegionEnc();
+  __sCriticalRegionEnd();
   return srTrue;
 }
 
@@ -173,18 +173,18 @@ sbool_t sRTOSMutexTake(sMutex_t *mux, sUBaseType_t timeoutTicks)
   mux->requesterHandle = _sRTOS_CurrentTask;
   while (mux->sem <= 0)
   {
-    __sCriticalRegionEnc();
+    __sCriticalRegionEnd();
     if (_sTickCount >= timeoutAfter)
     {
       return srFalse;
     }
     sRTOSTaskYield();
-    __sCriticalRegionEnc();
+    __sCriticalRegionEnd();
   }
 
   mux->holderHandle = _sRTOS_CurrentTask;
   waitingForMutexGive_delete(_sRTOS_CurrentTask);
   mux->sem--;
-  __sCriticalRegionEnc();
+  __sCriticalRegionEnd();
   return srTrue;
 }
