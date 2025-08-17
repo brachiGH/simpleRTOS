@@ -7,10 +7,14 @@
 .extern _sRTOS_CurrentTask
 .extern _sRTOSSchedulerGetFirstAvailable
 .extern _GetTimer
+.extern _continueExecutingSysTick_Handler
 .extern _sIsTimerRunning
+.extern _sQuantaCount
+.extern __sQUANTA__
+.global SysTick_Handler
 .global sScheduler_Handler
 .global sRTOSStartScheduler
-.global sTimer_Handler
+.global sTimerReturn_Handler
 
 
 /*
@@ -34,13 +38,54 @@ Hardware saves core registers automatically; software can save more if needed.
 This ensures the interrupted code resumes correctly after the interrupt.
     
 */
+
+
+.section .text.SysTick_Handler,"ax",%progbits
+.type SysTick_Handler, %function
+SysTick_Handler:
+    ldr     r0, =_sTickCount
+    ldr     r1, [r0]
+    adds    r1, #1
+    str     r1, [r0]
+    ldr     r0, =_sIsTimerRunning       //
+    ldr     r0, [r0]                    // argument of _GetTimer
+    cmp     r0, #1
+    beq     2f
+    push    {lr}
+    bl      _GetTimer                   // get timer available else return null (this also decrement the timers)
+    pop     {lr}
+    cmp     r0, #0                      // check if NULL
+    bne     1f                      
+    // running scheduler_Handler if a quantom has passed
+    ldr     r0, =_sQuantaCount
+    ldr     r1, [r0]                    // read _sQuantaCount
+    adds    r1, #1
+    str     r1, [r0]                    // save _sQuantaCount=_sQuantaCount+1
+    ldr     r3, =__sQUANTA__
+    ldr     r3, [r3]                    // read __sQUANTA__
+    cmp     r3, r1
+    bne     2f                          
+    // if _sQuantaCount==__sQUANTA__
+    mov     r1, 0                       
+    str     r1, [r0]                    // save _sQuantaCount=0
+    b       sScheduler_Handler
+1:
+    b       sTimer_Handler
+2:
+    cpsie   i                           // enable isr  
+    bx      lr                          // return
+.size SysTick_Handler, .-SysTick_Handler
+
+
+
+
 .section .text.sScheduler_Handler,"ax",%progbits
 .type sScheduler_Handler, %function
 sScheduler_Handler:                     // r0,r1,r2,r3,r12,lr,pc,psr   saved by interrupt
     cpsid   i                           // disable isr
-    push    {lr}                        // save return address
     ldr     r0, =_sRTOS_CurrentTask     // the _sRTOSSchedulerGetCurrent return the current task (r0 is the return value)
     ldr     r1, [r0]
+    push    {lr}                        // save return address
     bl	    _sRTOSSchedulerGetFirstAvailable //
     pop     {lr}                        // restore return address
     ldr     r3, [r1, #4]                // r3 = CurrentTask->nextTask
@@ -55,8 +100,8 @@ sScheduler_Handler:                     // r0,r1,r2,r3,r12,lr,pc,psr   saved by 
     beq    switchToRunningNextTask
     cmp     r1, r0                      // check if current and first avaible are the same
     bne    switchToRunningfirstAbleTask
-    // if eq  then exit
-    cpsie   i                           // enable isr  
+    // if eq  then return execution to current task 
+    cpsie   i                           // enable isr
     bx      lr                          // return the same task
 
 switchToRunningfirstAbleTask:
@@ -83,14 +128,14 @@ switchToRunningNextTask:
 1:
     str     sp, [r1]                    // save the new current task sp
 2:
-    ldr     sp, [r3]                    // SP = nextTask->stackPt
+    ldr     sp, [r3]                    // SP = nextTask->stackPt or firstAvbleTask->stackPt
     ldr	    r0, =0x1                    // sRunning:0x1
     strb	r0, [r3, #9]                // change next task status to sRunning
 
     ldr     r0, =_sRTOS_CurrentTask
     str     r3, [r0]                    // change the current running task ptr
 
-    ldrb    r2, [r3, #8]                // nextTask->fps
+    ldrb    r2, [r3, #8]                // nextTask->fps or firstAvbleTask->fps
     cmp     r2, #1                      //
     bne     3f                          //
     pop     {r0}                        // if float point mode is on restore fpu registers of the next task
@@ -143,16 +188,6 @@ as if nothing happened.
 .type sTimer_Handler, %function
 sTimer_Handler:                         // r0,r1,r2,r3,r12,lr,pc,psr   saved by interrupt
     cpsid   i                           // disable isr
-    ldr     r0, =_sIsTimerRunning       //
-    ldr     r0, [r0]                    // argument of _GetTimer
-    push    {lr}
-    bl      _GetTimer                   // get timer available else return null (this also decrement the timers)
-    pop     {lr}
-    cmp     r0, #0                      // check if NULL
-    bne     1f
-    cpsie   i                           // enable isr  
-    bx      lr                          // return
-1:
     ldr     r2, =_sIsTimerRunning
     mov     r1, #1                      // change the _sIsTimerRunning to true
     str     r1, [r2]
@@ -163,11 +198,6 @@ sTimer_Handler:                         // r0,r1,r2,r3,r12,lr,pc,psr   saved by 
     bne     3f
     mov     r3, #0
     strb	r3, [r1, #11]               // change current saveRegiters to false (to tell the scheduler that registers are saved)
-    ldrb    r3, [r1, #9]                // read current status
-    cmp     r3, #1                      // check if the task status is running (the status cloud change by other events)
-    bne     2f                          //   in case a timer runs after an other timer 
-    mov     r3, #2                      // sReady:0x02
-    strb	r3, [r1, #9]                // change current task status to sReady
     push    {r4-r7}                     // save r4,r5,r6,r7,
     stmdb   sp!, {r8-r11}               //      r8,r9,r10,r11
     ldrb	r2, [r1, #8]                // CurrentTask->fps
@@ -180,11 +210,37 @@ sTimer_Handler:                         // r0,r1,r2,r3,r12,lr,pc,psr   saved by 
     str     sp, [r1]                    // save the new current task sp
 3:
     ldr     sp, [r0]                    // SP = Timer Task
-    cpsie   i                           // enable isr  
+    cpsie   i                           // isr is enabled
     bx      lr                          // return and start the next task
 .size sTimer_Handler, .-sTimer_Handler
 
 
+
+.section .text.sTimerReturn_Handler,"ax",%progbits
+.type sTimerReturn_Handler, %function
+sTimerReturn_Handler:
+    cpsid   i                           // disable isr
+    ldr     r2, =_sRTOS_CurrentTask     // the _sRTOSSchedulerGetCurrent return the current task (r0 is the return value)
+    ldr     r1, [r2]
+    ldr     sp, [r1]                    // set task sp
+    ldrb    r3, [r1, #11]               // read current saveRegiters
+    cmp     r3, #0                      // check if the task has saved regiters
+    bne     2f
+    ldrb    r2, [r1, #8]                // nextTask->fps or firstAvbleTask->fps
+    cmp     r2, #1                
+    bne     1f                          //
+    pop     {r0}                        // if float point mode is on restore fpu registers of the next task
+    vmsr    fpscr, r0                   //
+    vldmia  sp!, {s0-s31}               //
+1:
+    ldmia   sp!, {r8-r11}               //
+    pop     {r4-r7}                     //
+    mov     r0, #1
+    strb	r0, [r3, #11]               // change current saveRegiters to true (tell the scheduler that it has to save the registers) 
+2:
+    cpsie   i                           // enable isr  
+    bx      lr                          // return and start the next task
+.size sTimerReturn_Handler, .-sTimerReturn_Handler
 
 
 .section .text.sRTOSStartScheduler,"ax",%progbits

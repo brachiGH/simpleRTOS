@@ -9,25 +9,15 @@
 #include "simpleRTOSConfig.h"
 
 sUBaseType_t _sTickCount = 0;
+sUBaseType_t _sQuantaCount = 0;
 sUBaseType_t _sIsTimerRunning = 0;
+sUBaseType_t __sQUANTA__ = __sQUANTA;
 
 extern void sScheduler_Handler(void);
-extern void sTimer_Handler(void);
+extern void sTimerReturn_Handler(void);
 
-// this fucntion must not use any register other then r0,r1,r2,r3,r12
-// even after compiling it.
-__attribute__((naked)) void SysTick_Handler(void)
-{
-  _sTickCount++;
 
-  __asm volatile(
-      "b sTimer_Handler" ::: "memory");
-
-  if (_sTickCount % __sQUANTA == 0 && !_sIsTimerRunning)
-    __asm volatile(
-        "b sScheduler_Handler\n" ::: "memory");
-
-}
+__attribute__((weak)) void SysTick_Handler(void) {}
 
 __attribute__((naked)) void SVC_Handler(void)
 {
@@ -59,6 +49,8 @@ __attribute__((naked)) void SVC_Handler_c(uint32_t *sp)
       "ldrb.w  r1, [r1, #-2]        \n" // uint8_t svc_number = pc[-2];
       "cmp     r1, #0               \n"
       "beq     sScheduler_Handler   \n"
+      "cmp     r1, #1               \n"
+      "beq     sTimerReturn_Handler \n"
       "bx      lr                   \n" ::: "memory");
   // why the pc value contain the svc number?
   // The PC (Program Counter) is a CPU register that holds the

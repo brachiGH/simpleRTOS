@@ -16,7 +16,9 @@ extern sUBaseType_t _sIsTimerRunning;
 __STATIC_FORCEINLINE__ void _timerReturn(void *)
 {
   _sIsTimerRunning = 0;
-  sRTOSTaskYield();
+  __asm volatile(
+    "cpsie  i\n"
+    "svc    #1");
 }
 
 __STATIC_NAKED__ void _timerStart(sTimerHandle_t *, sTimerFunc_t timerTask)
@@ -73,7 +75,7 @@ static sUBaseType_t *_taskInitStack(sTimerFunc_t timerFunc, sTimerHandle_t *arg)
   return stack;
 }
 
-sTimerHandle_t *_GetTimer(sUBaseType_t _sIsTimerRunning)
+sTimerHandle_t *_GetTimer()
 {
   register sBaseType_t minTick = 1;
   register size_t minTickIdex;
@@ -90,7 +92,7 @@ sTimerHandle_t *_GetTimer(sUBaseType_t _sIsTimerRunning)
     }
   }
 
-  if (!_sIsTimerRunning && minTick <= 0)
+  if (minTick <= 0)
   {
     if (_sRTOS_timerLIST[minTickIdex]->autoReload == srFalse)
       _sRTOS_timerLIST[minTickIdex]->status = sBlocked;
