@@ -134,7 +134,7 @@ void sRTOSTaskStop(sTaskHandle_t *taskHandle)
 
 /*
  * will yeild if the priority of the current running Task is lower
- * then the started Task
+ * then the resumed Task
  */
 void sRTOSTaskResume(sTaskHandle_t *taskHandle)
 {

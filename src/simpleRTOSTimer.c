@@ -166,6 +166,7 @@ void sRTOSTimerStop(sTimerHandle_t *timerHandle)
 {
   timerHandle->status = sBlocked;
 }
+
 void sRTOSTimerResume(sTimerHandle_t *timerHandle)
 {
   timerHandle->status = sReady;

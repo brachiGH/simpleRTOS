@@ -107,6 +107,25 @@ sbool_t sRTOSSemaphoreTake(sSemaphore_t *sem, sUBaseType_t timeoutTicks)
     {
       return srFalse;
     }
+    __sCriticalRegionEnc();
+  }
+
+  (*sem)--;
+  __sCriticalRegionEnc();
+  return srTrue;
+}
+
+sbool_t sRTOSSemaphoreCooperativeTake(sSemaphore_t *sem, sUBaseType_t timeoutTicks)
+{
+  sUBaseType_t timeoutAfter = SAT_ADD_U32(_sTickCount, timeoutTicks);
+  __sCriticalRegionBegin();
+  while (*sem <= 0)
+  {
+    __sCriticalRegionEnc();
+    if (_sTickCount >= timeoutAfter)
+    {
+      return srFalse;
+    }
     sRTOSTaskYield();
     __sCriticalRegionEnc();
   }
