@@ -108,27 +108,27 @@ sRTOS_StatusTypeDef sRTOSTaskCreate(
 
 void sRTOSTaskUpdatePriority(sTaskHandle_t *taskHandle, sPriority_t priority)
 {
-  __sDisable_irq();
+  __sCriticalRegionBegin();
   _deleteTask(taskHandle);
   taskHandle->priority = priority;
   _insertTask(taskHandle);
-  __sEnable_irq();
+  __sCriticalRegionEnc();
 }
 
 void sRTOSTaskStop(sTaskHandle_t *taskHandle)
 {
   if (taskHandle->status != sDeleted && taskHandle->status != sBlocked)
   {
-    __sDisable_irq();
+    __sCriticalRegionBegin();
     taskHandle->status = sBlocked;
 
     if (taskHandle == _sRTOS_CurrentTask)
     {
-      __sEnable_irq();
+      __sCriticalRegionEnc();
       sRTOSTaskYield(); // if the current task deletes itself yield
       return;
     }
-    __sEnable_irq();
+    __sCriticalRegionEnc();
   }
 }
 
@@ -140,16 +140,16 @@ void sRTOSTaskResume(sTaskHandle_t *taskHandle)
 {
   if (taskHandle->status != sDeleted && taskHandle->status != sReady)
   {
-    __sDisable_irq();
+    __sCriticalRegionBegin();
     taskHandle->status = sReady;
 
     if (taskHandle->priority > _sRTOS_CurrentTask->priority)
     {
-      __sEnable_irq();
+      __sCriticalRegionEnc();
       sRTOSTaskYield();
       return;
     }
-    __sEnable_irq();
+    __sCriticalRegionEnc();
   }
 }
 
@@ -160,7 +160,7 @@ void sRTOSTaskDelete(sTaskHandle_t *taskHandle)
   // the task list will add a lot of edge cases to
   // deal with, thus a lot code will be added to the scheduler
 
-  __sDisable_irq();            // in case deleted task is the next to run
+  __sCriticalRegionBegin();            // in case deleted task is the next to run
   free(taskHandle->stackBase); // only 26byte are left
   taskHandle->status = sDeleted;
   taskHandle->stackBase = NULL;
@@ -169,12 +169,12 @@ void sRTOSTaskDelete(sTaskHandle_t *taskHandle)
   // if the current task deletes itself yield
   if (taskHandle == _sRTOS_CurrentTask)
   {
-    __sEnable_irq();
+    __sCriticalRegionEnc();
     sRTOSTaskYield();
     return;
   }
 
-  __sEnable_irq();
+  __sCriticalRegionEnc();
 }
 
 // only works on task not timers

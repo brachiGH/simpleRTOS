@@ -18,7 +18,7 @@
   \details Disables IRQ interrupts by setting the I-bit in the CPSR.
   Can only be executed in Privileged modes.
  */
-__STATIC_FORCEINLINE__ void __sDisable_irq(void)
+__STATIC_FORCEINLINE__ void __sCriticalRegionBegin(void)
 {
   __asm volatile("cpsid i" : : : "memory");
 }
@@ -28,7 +28,7 @@ __STATIC_FORCEINLINE__ void __sDisable_irq(void)
   \details Enables IRQ interrupts by clearing the I-bit in the CPSR.
            Can only be executed in Privileged modes.
  */
-__STATIC_FORCEINLINE__ void __sEnable_irq(void)
+__STATIC_FORCEINLINE__ void __sCriticalRegionEnc(void)
 {
   __asm volatile("cpsie i" : : : "memory");
 }
@@ -36,8 +36,12 @@ __STATIC_FORCEINLINE__ void __sEnable_irq(void)
 extern void SysTick_Handler(void);
 void SVC_Handler(void);
 
+
 sRTOS_StatusTypeDef sRTOSInit(sUBaseType_t BUS_FREQ);
+
+
 extern void sRTOSStartScheduler(void);
+
 
 sRTOS_StatusTypeDef sRTOSTaskCreate(
     sTaskFunc_t task,
@@ -47,6 +51,8 @@ sRTOS_StatusTypeDef sRTOSTaskCreate(
     sPriority_t priority,
     sTaskHandle_t *taskHandle,
     sUBaseType_t fpsMode);
+
+
 void sRTOSTaskUpdatePriority(sTaskHandle_t *taskHandle, sPriority_t priority);
 void sRTOSTaskStop(sTaskHandle_t *taskHandle);
 void sRTOSTaskResume(sTaskHandle_t *taskHandle);

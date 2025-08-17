@@ -34,7 +34,7 @@ void _idle(void *)
 
 void _insertTask(sTaskHandle_t *task)
 {
-  __sDisable_irq();
+  __sCriticalRegionBegin();
   // insert as first
   if (_sRTOS_TaskList->priority < task->priority)
   {
@@ -58,12 +58,12 @@ void _insertTask(sTaskHandle_t *task)
 
   currentTask->nextTask = task;
   task->nextTask = NULL;
-  __sEnable_irq();
+  __sCriticalRegionEnc();
 }
 
 void _deleteTask(sTaskHandle_t *task)
 {
-  __sDisable_irq();
+  __sCriticalRegionBegin();
   if (_sRTOS_TaskList == task)
   {
     _sRTOS_TaskList = _sRTOS_TaskList->nextTask;
@@ -85,13 +85,13 @@ void _deleteTask(sTaskHandle_t *task)
 freeTask:
   free(task->stackPt);
   free(task);
-  __sEnable_irq();
+  __sCriticalRegionEnc();
   return;
 }
 
 sRTOS_StatusTypeDef sRTOSInit(sUBaseType_t BUS_FREQ)
 {
-  __sDisable_irq();
+  __sCriticalRegionBegin();
   uint32_t PRESCALER = (BUS_FREQ / __sRTOS_SENSIBILITY);
 
   SYST_CSR = 0;             // disable Systic timer
@@ -111,7 +111,7 @@ sRTOS_StatusTypeDef sRTOSInit(sUBaseType_t BUS_FREQ)
   v &= ~(0xFFu << 16 | 0xFFu << 24);  // PendSV: lowest
   v |= (0xFFu << 16) | (0xFEu << 24); // SysTic: just above PendSV
   SYSPRI3 = v;
-  __sEnable_irq();
+  __sCriticalRegionEnc();
 
   _sRTOS_IdleTask = (sTaskHandle_t *)malloc(sizeof(sTaskHandle_t));
   if (_sRTOS_IdleTask == NULL)

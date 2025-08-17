@@ -19,7 +19,7 @@ __attribute__((weak)) void SysTick_Handler(void) {}
 
 __attribute__((naked)) void SVC_Handler(void)
 {
-  __sDisable_irq();
+  __sCriticalRegionBegin();
 
   // if the function is not naked, an other stack frame
   // is created for the SVC_Handler function.

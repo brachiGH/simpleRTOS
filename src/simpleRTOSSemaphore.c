@@ -91,28 +91,28 @@ void sRTOSSemaphoreCreate(sSemaphore_t *sem, sBaseType_t n)
 
 void sRTOSSemaphoreGive(sSemaphore_t *sem)
 {
-  __sDisable_irq();
+  __sCriticalRegionBegin();
   (*sem)++;
-  __sEnable_irq();
+  __sCriticalRegionEnc();
 }
 
 sbool_t sRTOSSemaphoreTake(sSemaphore_t *sem, sUBaseType_t timeoutTicks)
 {
   sUBaseType_t timeoutAfter = SAT_ADD_U32(_sTickCount, timeoutTicks);
-  __sDisable_irq();
+  __sCriticalRegionBegin();
   while (*sem <= 0)
   {
-    __sEnable_irq();
+    __sCriticalRegionEnc();
     if (_sTickCount >= timeoutAfter)
     {
       return srFalse;
     }
     sRTOSTaskYield();
-    __sEnable_irq();
+    __sCriticalRegionEnc();
   }
 
   (*sem)--;
-  __sEnable_irq();
+  __sCriticalRegionEnc();
   return srTrue;
 }
 
@@ -127,10 +127,10 @@ sbool_t sRTOSMutexGive(sMutex_t *mux)
   if (mux->sem == 1 || mux->holderHandle != _sRTOS_CurrentTask)
     return srFalse;
 
-  __sDisable_irq();
+  __sCriticalRegionBegin();
   waitingForMutexGive_add(mux->requesterHandle, _sRTOS_CurrentTask->priority);
   mux->sem++;
-  __sEnable_irq();
+  __sCriticalRegionEnc();
   sRTOSTaskYield();
   return srTrue;
 }
@@ -140,32 +140,32 @@ sbool_t sRTOSMutexGiveFromISR(sMutex_t *mux)
   if (mux->sem == 1)
     return srFalse;
 
-  __sDisable_irq();
+  __sCriticalRegionBegin();
   waitingForMutexGive_add(mux->requesterHandle, sPriorityRealtime);
   mux->sem++;
-  __sEnable_irq();
+  __sCriticalRegionEnc();
   return srTrue;
 }
 
 sbool_t sRTOSMutexTake(sMutex_t *mux, sUBaseType_t timeoutTicks)
 {
   sUBaseType_t timeoutAfter = SAT_ADD_U32(_sTickCount, timeoutTicks);
-  __sDisable_irq();
+  __sCriticalRegionBegin();
   mux->requesterHandle = _sRTOS_CurrentTask;
   while (mux->sem <= 0)
   {
-    __sEnable_irq();
+    __sCriticalRegionEnc();
     if (_sTickCount >= timeoutAfter)
     {
       return srFalse;
     }
     sRTOSTaskYield();
-    __sEnable_irq();
+    __sCriticalRegionEnc();
   }
 
   mux->holderHandle = _sRTOS_CurrentTask;
   waitingForMutexGive_delete(_sRTOS_CurrentTask);
   mux->sem--;
-  __sEnable_irq();
+  __sCriticalRegionEnc();
   return srTrue;
 }
