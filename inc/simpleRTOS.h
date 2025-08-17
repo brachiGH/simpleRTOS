@@ -9,6 +9,8 @@
 #define SIMPLERTOS_H_
 
 #include "simpleRTOSDefinitions.h"
+#include "simpleRTOSConfig.h"
+
 #define __ICSR (*((volatile uint32_t *)0xE000ED04))
 
 /**
@@ -68,12 +70,18 @@ void sRTOSTimerResume(sTimerHandle_t *timerHandle);
 void sRTOSTimerDelete(sTimerHandle_t *timerHandle);
 void sRTOSTimerUpdatePeriode(sTimerHandle_t *timerHandle, sBaseType_t period);
 
-void sRTOSSemaphoreCreate(sSemaphore_t *sem, sBaseType_t n);
-void sRTOSSemaphoreGive();
-void sRTOSSemaphoreTake();
+__STATIC_FORCEINLINE__ sUBaseType_t srMS_TO_TICKS(sUBaseType_t timeoutMS)
+{
+  return timeoutMS * (__sRTOS_SENSIBILITY / 1000);
+}
 
-void sRTOSMutexCreate(sSemaphore_t *sem);
-void sRTOSMutexGive();
-void sRTOSMutexTake();
+void sRTOSSemaphoreCreate(sSemaphore_t *sem, sBaseType_t n);
+void sRTOSSemaphoreGive(sSemaphore_t *sem);
+sbool_t sRTOSSemaphoreTake(sSemaphore_t *sem, sUBaseType_t timeoutTicks);
+
+void sRTOSMutexCreate(sMutex_t *mux);
+sbool_t sRTOSMutexGive(sMutex_t *mux);
+sbool_t sRTOSMutexTake(sMutex_t *mux, sUBaseType_t timeoutTicks);
+sbool_t sRTOSMutexGiveFromISR(sMutex_t *mux);
 
 #endif /* SIMPLERTOS_H_ */

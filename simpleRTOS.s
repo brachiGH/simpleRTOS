@@ -8,6 +8,7 @@
 .extern _sRTOSSchedulerGetFirstAvailable
 .extern _GetTimer
 .extern _continueExecutingSysTick_Handler
+.extern _getHighestPriorityMutexWaitingTask
 .extern _sIsTimerRunning
 .extern _sQuantaCount
 .extern __sQUANTA__
@@ -85,6 +86,11 @@ SysTick_Handler:
 sScheduler_Handler:                     // r0,r1,r2,r3,r12,lr,pc,psr   saved by interrupt
     ldr     r0, =_sRTOS_CurrentTask     // the _sRTOSSchedulerGetCurrent return the current task (r0 is the return value)
     ldr     r1, [r0]
+    push    {lr}
+    bl      _getHighestPriorityMutexWaitingTask
+    pop     {lr}
+    cmp     r0, #0
+    bne     4f
     push    {lr}                        // save return address
     bl	    _sRTOSSchedulerGetFirstAvailable //
     pop     {lr}                        // restore return address
@@ -100,7 +106,7 @@ sScheduler_Handler:                     // r0,r1,r2,r3,r12,lr,pc,psr   saved by 
     beq    switchToRunningNextTask
     cmp     r1, r0                      // check if current and first avaible are the same
     bne    switchToRunningfirstAbleTask
-    // if eq  then return execution to current task 
+4:  // if eq  then return execution to current task 
     cpsie   i                           // enable isr
     bx      lr                          // return the same task
 

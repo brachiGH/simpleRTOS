@@ -11,7 +11,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define __STATIC_FORCEINLINE__ __attribute__((always_inline)) static __inline 
+#define __STATIC_FORCEINLINE__ __attribute__((always_inline)) static __inline
 #define __STATIC_NAKED__ __attribute__((naked)) static
 
 #define srFALSE 0u
@@ -21,6 +21,8 @@
 #define MIN_STACK_SIZE_NO_FPU 16
 #define MIN_STACK_SIZE_FPU 49
 #define MAX_TASK_NAME_LEN 12
+
+#define SAT_ADD_U32(a, b) (((UINT32_MAX - (uint32_t)(a)) < (uint32_t)(b)) ? UINT32_MAX : (uint32_t)((uint32_t)(a) + (uint32_t)(b)))
 
 typedef int32_t sBaseType_t;
 typedef uint32_t sUBaseType_t;
@@ -70,9 +72,9 @@ __attribute__((packed, aligned(4))) struct tcb
   sbool_t fps; // floating-point state
   sTaskStatus_t status;
   sPriority_t priority;
-  sbool_t saveRegiters;  // tells the scheduler to save the registers if true
+  sbool_t saveRegiters; // tells the scheduler to save the registers if true
   sUBaseType_t *stackBase;
-  sUBaseType_t dontRunUntil; // time in ticks where the task can start running 
+  sUBaseType_t dontRunUntil; // time in ticks where the task can start running
   char name[12];
 };
 
@@ -83,7 +85,7 @@ typedef struct __attribute__((packed, aligned(4)))
   sUBaseType_t *stackPt;   // Pointer to the stack
   sUBaseType_t *stackBase; // Pointer to the Base of the stack
   sUBaseType_t id;         // Timer id
-  sBaseType_t Period;     // Timer period (the period is relative to __sRTOS_SENSIBILITY)
+  sBaseType_t Period;      // Timer period (the period is relative to __sRTOS_SENSIBILITY)
   sBaseType_t ticksElapsed;
   sbool_t autoReload; // Timer autoReload
   sTaskStatus_t status;
@@ -92,5 +94,11 @@ typedef struct __attribute__((packed, aligned(4)))
 typedef void (*sTaskFunc_t)(void *arg);
 typedef void (*sTimerFunc_t)(sTimerHandle_t *timerHandle);
 typedef sBaseType_t sSemaphore_t;
+typedef struct
+{
+  sSemaphore_t sem;
+  sTaskHandle_t *holderHandle;
+  sTaskHandle_t *requesterHandle;
+} sMutex_t;
 
 #endif /* SIMPLERTOSTYPES_H_ */

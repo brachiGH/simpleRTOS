@@ -5,20 +5,19 @@
  *      Author: brachiGH
  */
 
-#include "simpleRTOSConfig.h"
 #include "simpleRTOS.h"
 #include "stdlib.h"
 
 sUBaseType_t _sRTOS_timerCount = 0;
 sTimerHandle_t *_sRTOS_timerLIST[__sTIMER_LIST_LENGTH] = {NULL};
-extern sUBaseType_t _sIsTimerRunning;
+extern sUBaseType_t volatile _sIsTimerRunning;
 
 __STATIC_FORCEINLINE__ void _timerReturn(void *)
 {
   _sIsTimerRunning = 0;
   __asm volatile(
-    "cpsie  i\n"
-    "svc    #1");
+      "cpsie  i\n"
+      "svc    #1");
 }
 
 __STATIC_NAKED__ void _timerStart(sTimerHandle_t *, sTimerFunc_t timerTask)

@@ -5,13 +5,12 @@
  *      Author: brachiGH
  */
 
-#include "simpleRTOSConfig.h"
 #include "simpleRTOS.h"
 #include "stdlib.h"
 #include "string.h"
 extern void _deleteTask(sTaskHandle_t *task);
 extern void _insertTask(sTaskHandle_t *task);
-extern sUBaseType_t _sTickCount;
+extern sUBaseType_t volatile _sTickCount;
 
 sTaskHandle_t *_sRTOS_CurrentTask;
 
@@ -181,6 +180,6 @@ void sRTOSTaskDelete(sTaskHandle_t *taskHandle)
 // only works on task not timers
 void sRTOSTaskDelay(sUBaseType_t duration_ms)
 {
-  _sRTOS_CurrentTask->dontRunUntil = _sTickCount + (duration_ms * (__sRTOS_SENSIBILITY / 1000));
+  _sRTOS_CurrentTask->dontRunUntil = SAT_ADD_U32(_sTickCount, (duration_ms * (__sRTOS_SENSIBILITY / 1000)));
   sRTOSTaskYield();
 }

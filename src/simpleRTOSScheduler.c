@@ -5,11 +5,9 @@
  *      Author: brachiGH
  */
 
-#include "simpleRTOSConfig.h"
 #include "simpleRTOS.h"
 #include "stdlib.h"
 #include "string.h"
-
 
 #define SYST_CSR (*((volatile uint32_t *)0xE000E010))
 #define SYST_RVR (*((volatile uint32_t *)0xE000E014))
@@ -18,11 +16,12 @@
 
 #define SYSPRI3 (*((volatile uint32_t *)0xE000ED20))
 
+extern sTaskHandle_t *_getHighestPriorityMutexWaitingTask(void);
 
 /*************PV*****************/
 sTaskHandle_t *_sRTOS_TaskList;
 sTaskHandle_t *_sRTOS_IdleTask;
-extern sUBaseType_t _sTickCount;
+extern sUBaseType_t volatile _sTickCount;
 /********************************/
 
 void _idle(void *)
@@ -62,16 +61,14 @@ void _insertTask(sTaskHandle_t *task)
   __sEnable_irq();
 }
 
-
 void _deleteTask(sTaskHandle_t *task)
 {
   __sDisable_irq();
-    if (_sRTOS_TaskList == task)
+  if (_sRTOS_TaskList == task)
   {
-    _sRTOS_TaskList= _sRTOS_TaskList->nextTask;
+    _sRTOS_TaskList = _sRTOS_TaskList->nextTask;
     goto freeTask;
   }
-
 
   sTaskHandle_t *currentTask = _sRTOS_TaskList;
   while (currentTask->nextTask)
@@ -85,7 +82,6 @@ void _deleteTask(sTaskHandle_t *task)
     currentTask = nextTask;
   }
 
-
 freeTask:
   free(task->stackPt);
   free(task);
@@ -98,9 +94,9 @@ sRTOS_StatusTypeDef sRTOSInit(sUBaseType_t BUS_FREQ)
   __sDisable_irq();
   uint32_t PRESCALER = (BUS_FREQ / __sRTOS_SENSIBILITY);
 
-  SYST_CSR = 0;                                  // disable Systic timer
-  SYST_CVR = 0;                                  // set value to 0
-  SYST_RVR = (PRESCALER) - 1; // the value start counting from 0
+  SYST_CSR = 0;             // disable Systic timer
+  SYST_CVR = 0;             // set value to 0
+  SYST_RVR = (PRESCALER)-1; // the value start counting from 0
   /*
    * This makes SysTick the second least urgent interrupt after PendSV,
         (PendSV:
@@ -112,12 +108,12 @@ sRTOS_StatusTypeDef sRTOSInit(sUBaseType_t BUS_FREQ)
    * making your scheduler less likely to interfere with time-critical tasks.
    */
   uint32_t v = SYSPRI3;
-  v &= ~(0xFFu << 16 | 0xFFu << 24);   // PendSV: lowest
-  v |=  (0xFFu << 16) | (0xFEu << 24); // SysTic: just above PendSV
+  v &= ~(0xFFu << 16 | 0xFFu << 24);  // PendSV: lowest
+  v |= (0xFFu << 16) | (0xFEu << 24); // SysTic: just above PendSV
   SYSPRI3 = v;
 
   SYST_CSR = 0x00000007; // enable clock + Enables SysTick exception request
-                              // + set clock source to processor clock
+                         // + set clock source to processor clock
 
   _sRTOS_IdleTask = (sTaskHandle_t *)malloc(sizeof(sTaskHandle_t));
   if (_sRTOS_IdleTask == NULL)
@@ -131,7 +127,7 @@ sRTOS_StatusTypeDef sRTOSInit(sUBaseType_t BUS_FREQ)
                          4,
                          sPriorityIdle,
                          _sRTOS_IdleTask,
-						             srFALSE);
+                         srFALSE);
 }
 
 sTaskHandle_t *_sRTOSSchedulerGetFirstAvailable(void)
