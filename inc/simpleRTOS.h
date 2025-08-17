@@ -51,7 +51,7 @@ void sRTOSTaskResume(sTaskHandle_t *taskHandle);
 void sRTOSTaskDelete(sTaskHandle_t *taskHandle);
 void sRTOSTaskDelay(sUBaseType_t duration_ms);
 
-__attribute__((always_inline)) static __inline void sRTOSTaskYield(void)
+__STATIC_FORCEINLINE__ void sRTOSTaskYield(void)
 {
   // __ICSR = (1u << 26); // changes SysTick exception state to pending
   __asm volatile("svc #0");

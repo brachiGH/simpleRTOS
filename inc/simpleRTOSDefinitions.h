@@ -44,13 +44,13 @@ typedef enum
 
 enum
 {
-  sPriorityIdle = -3,
+  sPriorityIdle = -128,
   sPriorityLow = -2,
   sPriorityBelowNormal = -1,
   sPriorityNormal = 0,
   sPriorityAboveNormal = +1,
   sPriorityHigh = +2,
-  sPriorityRealtime = +3
+  sPriorityRealtime = +127
 };
 
 typedef signed char sPriority_t;
@@ -60,7 +60,6 @@ typedef enum
   sBlocked,
   sRunning,
   sReady,
-  sWaiting,
   sDeleted
 } sTaskStatus_t;
 
@@ -73,6 +72,7 @@ __attribute__((packed, aligned(4))) struct tcb
   sPriority_t priority;
   sbool_t saveRegiters;  // tells the scheduler to save the registers if true
   sUBaseType_t *stackBase;
+  sUBaseType_t dontRunUntil; // time in ticks where the task can start running 
   char name[12];
 };
 

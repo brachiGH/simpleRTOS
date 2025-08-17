@@ -22,6 +22,7 @@
 /*************PV*****************/
 sTaskHandle_t *_sRTOS_TaskList;
 sTaskHandle_t *_sRTOS_IdleTask;
+extern sUBaseType_t _sTickCount;
 /********************************/
 
 void _idle(void *)
@@ -138,7 +139,7 @@ sTaskHandle_t *_sRTOSSchedulerGetFirstAvailable(void)
   sTaskHandle_t *task = _sRTOS_TaskList;
   while (task)
   {
-    if (task->status == sReady || task->status == sRunning)
+    if ((task->status == sReady || task->status == sRunning) && task->dontRunUntil <= _sTickCount)
     {
       return task;
     }

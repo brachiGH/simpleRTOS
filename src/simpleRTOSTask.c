@@ -11,6 +11,7 @@
 #include "string.h"
 extern void _deleteTask(sTaskHandle_t *task);
 extern void _insertTask(sTaskHandle_t *task);
+extern sUBaseType_t _sTickCount;
 
 sTaskHandle_t *_sRTOS_CurrentTask;
 
@@ -22,7 +23,7 @@ __STATIC_NAKED__ void _taskReturn(void *)
 }
 
 static sUBaseType_t *_taskInitStack(sTaskFunc_t taskFunc, void *arg,
-                             sUBaseType_t stacksize, sUBaseType_t fpsMode)
+                                    sUBaseType_t stacksize, sUBaseType_t fpsMode)
 {
   stacksize = ((fpsMode == srFALSE) ? MIN_STACK_SIZE_NO_FPU : MIN_STACK_SIZE_FPU) + stacksize;
   sUBaseType_t *stack = (sUBaseType_t *)malloc(sizeof(sUBaseType_t) * (stacksize));
@@ -41,7 +42,7 @@ static sUBaseType_t *_taskInitStack(sTaskFunc_t taskFunc, void *arg,
       xPSR (program status register)
 */
 
-  stack[stacksize - 8] = (sUBaseType_t)arg;        // R0
+  stack[stacksize - 8] = (sUBaseType_t)arg;           // R0
   stack[stacksize - 3] = (sUBaseType_t)(_taskReturn); // LR
   // The task address is set in the PC register
   stack[stacksize - 2] = (sUBaseType_t)(taskFunc); // PC
@@ -99,6 +100,7 @@ sRTOS_StatusTypeDef sRTOSTaskCreate(
   taskHandle->saveRegiters = srTrue;
   taskHandle->fps = (sbool_t)fpsMode;
   taskHandle->priority = priority;
+  taskHandle->dontRunUntil = 0;
   strncpy(taskHandle->name, name, MAX_TASK_NAME_LEN);
 
   _insertTask(taskHandle);
@@ -179,4 +181,6 @@ void sRTOSTaskDelete(sTaskHandle_t *taskHandle)
 // only works on task not timers
 void sRTOSTaskDelay(sUBaseType_t duration_ms)
 {
+  _sRTOS_CurrentTask->dontRunUntil = _sTickCount + (duration_ms * (__sRTOS_SENSIBILITY / 1000));
+  sRTOSTaskYield();
 }
