@@ -84,13 +84,13 @@ SysTick_Handler:
 .section .text.sScheduler_Handler,"ax",%progbits
 .type sScheduler_Handler, %function
 sScheduler_Handler:                     // r0,r1,r2,r3,r12,lr,pc,psr   saved by interrupt
+    ldr     r0, =_sRTOS_CurrentTask     // the _sRTOSSchedulerGetCurrent return the current task (r0 is the return value)
+    ldr     r1, [r0]
     push    {lr}
     bl      _getHighestPriorityMutexWaitingTask
     pop     {lr}
     cmp     r0, #0
-    bne     4f
-    ldr     r0, =_sRTOS_CurrentTask     // the _sRTOSSchedulerGetCurrent return the current task (r0 is the return value)
-    ldr     r1, [r0]
+    bne     switchToRunningfirstAbleTask
     push    {lr}                        // save return address
     bl	    _sRTOSSchedulerGetFirstAvailable //
     pop     {lr}                        // restore return address
