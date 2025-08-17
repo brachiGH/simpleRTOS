@@ -21,6 +21,8 @@ __attribute__((weak)) void SysTick_Handler(void) {}
 
 __attribute__((naked)) void SVC_Handler(void)
 {
+  __sDisable_irq();
+
   // if the function is not naked, an other stack frame
   // is created for the SVC_Handler function.
   // And the address for this stack is moved into
@@ -51,6 +53,7 @@ __attribute__((naked)) void SVC_Handler_c(uint32_t *sp)
       "beq     sScheduler_Handler   \n"
       "cmp     r1, #1               \n"
       "beq     sTimerReturn_Handler \n"
+      "cpsie   i                    \n"
       "bx      lr                   \n" ::: "memory");
   // why the pc value contain the svc number?
   // The PC (Program Counter) is a CPU register that holds the

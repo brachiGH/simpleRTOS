@@ -43,6 +43,7 @@ This ensures the interrupted code resumes correctly after the interrupt.
 .section .text.SysTick_Handler,"ax",%progbits
 .type SysTick_Handler, %function
 SysTick_Handler:
+    cpsid   i                           // disable isr
     ldr     r0, =_sTickCount
     ldr     r1, [r0]
     adds    r1, #1
@@ -82,7 +83,6 @@ SysTick_Handler:
 .section .text.sScheduler_Handler,"ax",%progbits
 .type sScheduler_Handler, %function
 sScheduler_Handler:                     // r0,r1,r2,r3,r12,lr,pc,psr   saved by interrupt
-    cpsid   i                           // disable isr
     ldr     r0, =_sRTOS_CurrentTask     // the _sRTOSSchedulerGetCurrent return the current task (r0 is the return value)
     ldr     r1, [r0]
     push    {lr}                        // save return address
@@ -187,7 +187,6 @@ as if nothing happened.
 .section .text.sTimer_Handler,"ax",%progbits
 .type sTimer_Handler, %function
 sTimer_Handler:                         // r0,r1,r2,r3,r12,lr,pc,psr   saved by interrupt
-    cpsid   i                           // disable isr
     ldr     r2, =_sIsTimerRunning
     mov     r1, #1                      // change the _sIsTimerRunning to true
     str     r1, [r2]
