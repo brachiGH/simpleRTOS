@@ -8,8 +8,8 @@
 #include "simpleRTOS.h"
 #include "stdlib.h"
 
-extern sbool_t _pushTaskNotification(sTaskHandle_t *task, sUBaseType_t message, 
-            sNotificationType_t type, sPriority_t priority);
+extern sbool_t _pushTaskNotification(sTaskHandle_t *task, sUBaseType_t message,
+                                     sNotificationType_t type, sPriority_t priority);
 
 extern sTaskHandle_t *_sRTOS_CurrentTask;
 extern sUBaseType_t volatile _sTickCount;
@@ -34,7 +34,7 @@ sbool_t sRTOSSemaphoreTake(sSemaphore_t *sem, sUBaseType_t timeoutTicks)
   while (*sem <= 0)
   {
     __sCriticalRegionEnd();
-    __sCriticalRegionEnd();
+    __sCriticalRegionBegin();
   }
 
   (*sem)--;
@@ -51,7 +51,7 @@ sbool_t sRTOSSemaphoreCooperativeTake(sSemaphore_t *sem, sUBaseType_t timeoutTic
   {
     __sCriticalRegionEnd();
     sRTOSTaskYield();
-    __sCriticalRegionEnd();
+    __sCriticalRegionBegin();
   }
 
   (*sem)--;
@@ -71,8 +71,8 @@ sbool_t sRTOSMutexGive(sMutex_t *mux)
     return srFalse;
 
   __sCriticalRegionBegin();
-  _pushTaskNotification(mux->requesterHandle, (sUBaseType_t)NULL, 
-                              sNotificationMutex, _sRTOS_CurrentTask->priority);
+  _pushTaskNotification(mux->requesterHandle, (sUBaseType_t)NULL,
+                        sNotificationMutex, _sRTOS_CurrentTask->priority);
   mux->sem++;
   __sCriticalRegionEnd();
   sRTOSTaskYield();
@@ -85,8 +85,8 @@ sbool_t sRTOSMutexGiveFromISR(sMutex_t *mux)
     return srFalse;
 
   __sCriticalRegionBegin();
-  _pushTaskNotification(mux->requesterHandle, (sUBaseType_t)NULL, 
-                              sNotificationMutex, sPriorityMax); // ISRs have a higher priority then any task;
+  _pushTaskNotification(mux->requesterHandle, (sUBaseType_t)NULL,
+                        sNotificationMutex, sPriorityMax); // ISRs have a higher priority then any task;
   mux->sem++;
   __sCriticalRegionEnd();
   return srTrue;
@@ -102,7 +102,7 @@ sbool_t sRTOSMutexTake(sMutex_t *mux, sUBaseType_t timeoutTicks)
   {
     __sCriticalRegionEnd();
     sRTOSTaskYield();
-    __sCriticalRegionEnd();
+    __sCriticalRegionBegin();
   }
 
   mux->holderHandle = _sRTOS_CurrentTask;
