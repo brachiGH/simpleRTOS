@@ -22,6 +22,8 @@ extern sTaskNotification_t *_checkoutHighestPriorityNotif();
 /*************PV*****************/
 sTaskHandle_t *_sRTOS_TaskList;
 sTaskHandle_t *_sRTOS_IdleTask;
+
+extern sbool_t _currentTaskHasNotif;
 extern sUBaseType_t volatile _sTickCount;
 /********************************/
 
@@ -136,8 +138,10 @@ sTaskHandle_t *_sRTOSGetFirstAvailableTask(void)
           // When Mutex sends a notification it is not sending messages
           free(taskWithNotificataion); // this causes a after free but it is fine because this function is
                                        // run in a critical region (it won't change)
+        } else if (taskWithNotificataion->type == sNotification)
+        {
+          _currentTaskHasNotif = srTrue;
         }
-
         return taskWithNotificataion->task;
       }
       return task;

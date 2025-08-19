@@ -106,8 +106,9 @@ typedef struct
 
 typedef enum
 {
+  sNotification,
   sNotificationEmpty,
-  sNotificationMutex
+  sNotificationMutex,
 } sNotificationType_t;
 
 typedef struct sTaskNotification_t

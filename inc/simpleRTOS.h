@@ -203,8 +203,8 @@ sbool_t sRTOSMutexGiveFromISR(sMutex_t *mux);
 sbool_t sRTOSMutexTake(sMutex_t *mux, sUBaseType_t timeoutTicks);
 
 
-sUBaseType_t sRTOSTaskNotifyTake(sbool_t clearCountOnExit, sUBaseType_t itemSize);
-sbool_t sRTOSTaskNotify(sTaskHandle_t *taskToNotify, sUBaseType_t item);
+sUBaseType_t sRTOSTaskNotifyTake(sUBaseType_t timeoutTicks);
+sbool_t sRTOSTaskNotify(sTaskHandle_t *taskToNotify, sUBaseType_t message);
 
 void sRTOSQueueCreate(sQueueHandle_t *queueHandle, sUBaseType_t queueLengh, sUBaseType_t itemSize);
 sbool_t sRTOSQueueReceive(sQueueHandle_t *queueHandle, void *itemPtr, sUBaseType_t timeoutTicks);

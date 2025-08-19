@@ -8,7 +8,10 @@
 #include "simpleRTOS.h"
 #include "stdlib.h"
 
+extern sTaskHandle_t *_sRTOS_CurrentTask;
+extern sUBaseType_t _sTickCount;
 sTaskNotification_t *_sRTOSNotifPriorityQueue = NULL;
+sbool_t _currentTaskHasNotif = srFalse;
 
 sbool_t _pushTaskNotification(sTaskHandle_t *task, sUBaseType_t message, 
             sNotificationType_t type, sPriority_t priority)
@@ -72,4 +75,26 @@ sTaskNotification_t *_popHighestPriorityNotif()
   _sRTOSNotifPriorityQueue = Notif->next;
 
   return Notif;
+}
+
+sbool_t sRTOSTaskNotify(sTaskHandle_t *taskToNotify, sUBaseType_t message)
+{
+  return _pushTaskNotification(taskToNotify, message, 
+            sNotification, _sRTOS_CurrentTask->priority);
+}
+
+sUBaseType_t sRTOSTaskNotifyTake(sUBaseType_t timeoutTicks)
+{
+  sUBaseType_t timeoutFinish = SAT_ADD_U32(_sTickCount, timeoutTicks);
+  _sRTOS_CurrentTask->dontRunUntil = timeoutFinish;
+  while (!_currentTaskHasNotif)
+  {
+    sRTOSTaskYield();
+  }
+  _currentTaskHasNotif = srFalse;
+
+  sTaskNotification_t  *temp =_popHighestPriorityNotif();
+  sUBaseType_t msg = temp->message;
+  free(temp);
+  return msg;
 }
