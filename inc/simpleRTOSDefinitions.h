@@ -115,8 +115,19 @@ typedef struct sTaskNotification_t
   sTaskHandle_t *task;
   sPriority_t priority;
   struct sTaskNotification_t *next;
-  sUBaseType_t message;
+  void *message;
   sNotificationType_t type;
 } sTaskNotification_t;
+
+
+
+typedef struct
+{
+  sUBaseType_t maxLenght;
+  sUBaseType_t lenght;
+  sUBaseType_t itemSize;
+  sUBaseType_t index;
+  void **items;
+} sQueueHandle_t;
 
 #endif /* SIMPLERTOSTYPES_H_ */
