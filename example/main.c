@@ -1,6 +1,5 @@
 #include <stdint.h>
 #include "stm32f4xx.h"
-
 #include "simpleRTOS.h"
 
 uint32_t count0, count1, count2, count3, count4;
@@ -32,7 +31,7 @@ void Task0(void *)
   while (1)
   {
     count0++;
-    if (count0 % 1000 == 0)
+    if (count0 == 100)
     {
       sRTOSTaskStop(&Task0H);
     }
@@ -44,9 +43,9 @@ void Task1(void *)
   while (1)
   {
     count1++;
-    if (count1 % 1000 == 0)
+    if (count1 == 1000)
     {
-      sRTOSTaskStop(&Task0H);
+      sRTOSTaskResume(&Task0H);
     }
   }
 }
@@ -56,7 +55,7 @@ void Task2(void *)
   while (1)
   {
     count2++;
-    if (count2 % 9000 == 0)
+    if (count2 == 9000)
     {
       sRTOSTaskDelete(&Task0H);
     }
