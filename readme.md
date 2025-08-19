@@ -1,6 +1,6 @@
 # simpleRTOS
 
-This is a small RTOS designed for Cortex-M microcontrollers, providing features such as timers, semaphores, and mutexes, primarily for learning and experimentation. It uses a preemptive, priority-based scheduler driven by SysTick, and is designed with minimal memory footprint and straightforward configuration. 
+This is a small RTOS designed for Cortex-M4 microcontrollers, providing features such as timers, semaphores, and mutexes, primarily for learning and experimentation. It uses a preemptive, priority-based scheduler driven by SysTick, and is designed with minimal memory footprint and straightforward configuration. 
 
 Note: This is not intended for production use.
 
