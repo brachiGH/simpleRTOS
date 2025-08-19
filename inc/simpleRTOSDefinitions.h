@@ -55,6 +55,9 @@ enum
   sPriorityRealtime = +127
 };
 
+#define sPriorityMin sPriorityIdle
+#define sPriorityMax sPriorityRealtime
+
 typedef signed char sPriority_t;
 
 typedef enum
