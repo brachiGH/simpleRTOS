@@ -28,15 +28,12 @@ void sRTOSSemaphoreGive(sSemaphore_t *sem)
 
 sbool_t sRTOSSemaphoreTake(sSemaphore_t *sem, sUBaseType_t timeoutTicks)
 {
-  sUBaseType_t timeoutAfter = SAT_ADD_U32(_sTickCount, timeoutTicks);
+  sUBaseType_t timeoutFinish = SAT_ADD_U32(_sTickCount, timeoutTicks);
   __sCriticalRegionBegin();
+  _sRTOS_CurrentTask->dontRunUntil = timeoutFinish;
   while (*sem <= 0)
   {
     __sCriticalRegionEnd();
-    if (_sTickCount >= timeoutAfter)
-    {
-      return srFalse;
-    }
     __sCriticalRegionEnd();
   }
 
@@ -47,15 +44,12 @@ sbool_t sRTOSSemaphoreTake(sSemaphore_t *sem, sUBaseType_t timeoutTicks)
 
 sbool_t sRTOSSemaphoreCooperativeTake(sSemaphore_t *sem, sUBaseType_t timeoutTicks)
 {
-  sUBaseType_t timeoutAfter = SAT_ADD_U32(_sTickCount, timeoutTicks);
+  sUBaseType_t timeoutFinish = SAT_ADD_U32(_sTickCount, timeoutTicks);
   __sCriticalRegionBegin();
+  _sRTOS_CurrentTask->dontRunUntil = timeoutFinish;
   while (*sem <= 0)
   {
     __sCriticalRegionEnd();
-    if (_sTickCount >= timeoutAfter)
-    {
-      return srFalse;
-    }
     sRTOSTaskYield();
     __sCriticalRegionEnd();
   }
@@ -100,16 +94,13 @@ sbool_t sRTOSMutexGiveFromISR(sMutex_t *mux)
 
 sbool_t sRTOSMutexTake(sMutex_t *mux, sUBaseType_t timeoutTicks)
 {
-  sUBaseType_t timeoutAfter = SAT_ADD_U32(_sTickCount, timeoutTicks);
+  sUBaseType_t timeoutFinish = SAT_ADD_U32(_sTickCount, timeoutTicks);
   __sCriticalRegionBegin();
   mux->requesterHandle = _sRTOS_CurrentTask;
+  _sRTOS_CurrentTask->dontRunUntil = timeoutFinish;
   while (mux->sem <= 0)
   {
     __sCriticalRegionEnd();
-    if (_sTickCount >= timeoutAfter)
-    {
-      return srFalse;
-    }
     sRTOSTaskYield();
     __sCriticalRegionEnd();
   }
