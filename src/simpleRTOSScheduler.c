@@ -104,9 +104,6 @@ sRTOS_StatusTypeDef sRTOSInit(sUBaseType_t BUS_FREQ)
   shpr3[2] = 0xFFu; // PendSV priority byte
   shpr3[3] = 0xFEu; // SysTick priority byte
 
-  SYST_CSR = 0x00000007; // enable SysTick: ENABLE | TICKINT | CLKSOURCE
-
-
   _sRTOS_IdleTask = (sTaskHandle_t *)malloc(sizeof(sTaskHandle_t));
   if (_sRTOS_IdleTask == NULL)
   {

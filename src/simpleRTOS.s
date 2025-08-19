@@ -266,6 +266,10 @@ sRTOSStartScheduler:
     strb	r1, [r2, #9]                      // change task status to sRunning
     ldr     r0, =_sRTOS_CurrentTask
     str     r2, [r0]                          // save the current task ptr
+    // ...enable SysTick...
+    ldr r0, =0xE000E010                        // #define SYST_CSR (*((volatile uint32_t *)0xE000E010))
+    movs r1, #7                               // ENABLE | TICKINT | CLKSOURCE
+    str r1, [r0]                              // enable SysTick, enable exception, select processor clock
     cpsie   i                                 // enable irq
     bx      lr
 .size sRTOSStartScheduler, .-sRTOSStartScheduler
