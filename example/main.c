@@ -44,7 +44,7 @@ void Task1(void *)
   while (1)
   {
     count1++;
-    if (count1 = 1000 == 0)
+    if (count1 % 1000 == 0)
     {
       sRTOSTaskStop(&Task0H);
     }
@@ -56,7 +56,7 @@ void Task2(void *)
   while (1)
   {
     count2++;
-    if (count2 = 9000 == 0)
+    if (count2 % 9000 == 0)
     {
       sRTOSTaskDelete(&Task0H);
     }
