@@ -17,6 +17,7 @@
 #define SYSPRI3 (*((volatile uint32_t *)0xE000ED20))
 
 extern sTaskNotification_t *_popHighestPriorityNotif();
+extern sTaskNotification_t *_checkoutHighestPriorityNotif();
 
 /*************PV*****************/
 sTaskHandle_t *_sRTOS_TaskList;
@@ -122,7 +123,7 @@ sRTOS_StatusTypeDef sRTOSInit(sUBaseType_t BUS_FREQ)
 sTaskHandle_t *_sRTOSGetFirstAvailableTask(void)
 {
   sTaskHandle_t *task = _sRTOS_TaskList;
-  sTaskNotification_t *taskWithNotificataion = _popHighestPriorityNotif();
+  sTaskNotification_t *taskWithNotificataion = _checkoutHighestPriorityNotif();
   while (task)
   {
     if ((task->status == sReady || task->status == sRunning) && task->dontRunUntil <= _sTickCount)
@@ -131,6 +132,7 @@ sTaskHandle_t *_sRTOSGetFirstAvailableTask(void)
       {
         if (taskWithNotificataion->type == sNotificationMutex)
         {
+          _popHighestPriorityNotif();
           // When Mutex sends a notification it is not sending messages
           free(taskWithNotificataion); // this causes a after free but it is fine because this function is
                                        // run in a critical region (it won't change)
