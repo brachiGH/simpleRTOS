@@ -16,7 +16,7 @@
 
 #define SYSPRI3 (*((volatile uint32_t *)0xE000ED20))
 
-extern sTaskHandle_t *_getHighestPriorityMutexWaitingTask(void);
+extern sTaskNotification_t *_popHighestPriorityNotif();
 
 /*************PV*****************/
 sTaskHandle_t *_sRTOS_TaskList;
@@ -91,27 +91,21 @@ freeTask:
 
 sRTOS_StatusTypeDef sRTOSInit(sUBaseType_t BUS_FREQ)
 {
-  __sCriticalRegionBegin();
   uint32_t PRESCALER = (BUS_FREQ / __sRTOS_SENSIBILITY);
 
-  SYST_CSR = 0;             // disable Systic timer
-  SYST_CVR = 0;             // set value to 0
-  SYST_RVR = (PRESCALER)-1; // the value start counting from 0
-  /*
-   * This makes SysTick the second least urgent interrupt after PendSV,
-        (PendSV:
-         What it is: a software-triggered, low‑priority exception meant for deferred work. RTOSes use it to perform context switches outside time‑critical ISRs.
-         Why it’s used: you can request a switch from any ISR (e.g., SysTick), but the actual save/restore runs in PendSV at the lowest priority so higher‑priority interrupts aren’t delayed.
-         How to trigger: set the PENDSVSET bit in SCB->ICSR; hardware clears it on entry.)
-   * so it only runs when nothing more important is happening.
-   * Other interrupts with higher priority can interrupt the SysTick handler,
-   * making your scheduler less likely to interfere with time-critical tasks.
-   */
-  uint32_t v = SYSPRI3;
-  v &= ~(0xFFu << 16 | 0xFFu << 24);  // PendSV: lowest
-  v |= (0xFFu << 16) | (0xFEu << 24); // SysTic: just above PendSV
-  SYSPRI3 = v;
-  __sCriticalRegionEnd();
+  if (PRESCALER == 0) return sRTOS_ERROR; // avoid underflow
+
+  SYST_CSR = 0;             // disable SysTick
+  SYST_CVR = 0;             // clear current value
+  SYST_RVR = ((PRESCALER) - 1) & 0x00FFFFFFu; // RVR is 24-bit
+
+  /* set PendSV lowest, SysTick just above PendSV (use byte access to avoid endian/shift mistakes) */
+  uint8_t *shpr3 = (uint8_t *)&SYSPRI3;
+  shpr3[2] = 0xFFu; // PendSV priority byte
+  shpr3[3] = 0xFEu; // SysTick priority byte
+
+  SYST_CSR = 0x00000007; // enable SysTick: ENABLE | TICKINT | CLKSOURCE
+
 
   _sRTOS_IdleTask = (sTaskHandle_t *)malloc(sizeof(sTaskHandle_t));
   if (_sRTOS_IdleTask == NULL)
@@ -128,13 +122,25 @@ sRTOS_StatusTypeDef sRTOSInit(sUBaseType_t BUS_FREQ)
                          srFALSE);
 }
 
-sTaskHandle_t *_sRTOSSchedulerGetFirstAvailable(void)
+sTaskHandle_t *_sRTOSGetFirstAvailableTask(void)
 {
   sTaskHandle_t *task = _sRTOS_TaskList;
+  sTaskNotification_t *taskWithNotificataion = _popHighestPriorityNotif();
   while (task)
   {
     if ((task->status == sReady || task->status == sRunning) && task->dontRunUntil <= _sTickCount)
     {
+      if (taskWithNotificataion && taskWithNotificataion->priority >= task->priority)
+      {
+        if (taskWithNotificataion->type == sNotificationMutex)
+        {
+          // When Mutex sends a notification it is not sending messages
+          free(taskWithNotificataion); // this causes a after free but it is fine because this function is
+                                       // run in a critical region (it won't change)
+        }
+
+        return taskWithNotificataion->task;
+      }
       return task;
     }
     task = task->nextTask;

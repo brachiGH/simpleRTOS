@@ -1,0 +1,75 @@
+/*
+ * simpleRTOSTaskNotication.c
+ *
+ *  Created on: Aug 19, 2025
+ *      Author: brachigh
+ */
+
+#include "simpleRTOS.h"
+#include "stdlib.h"
+
+sTaskNotification_t *_sRTOSNotifPriorityQueue = NULL;
+
+sbool_t _pushTaskNotification(sTaskHandle_t *task, sUBaseType_t message, 
+            sNotificationType_t type, sPriority_t priority)
+{
+  sTaskNotification_t *Notif = malloc(sizeof(sTaskNotification_t));
+  if (Notif == NULL) return srFalse;
+  
+  Notif->task = task;
+  Notif->priority = priority;
+  Notif->message = message;
+  Notif->type = type;
+  Notif->next = NULL;
+
+  if (_sRTOSNotifPriorityQueue == NULL)
+  {
+    _sRTOSNotifPriorityQueue = Notif;
+  
+    return srTrue;
+  }
+
+  if (_sRTOSNotifPriorityQueue->priority <= priority)
+  {
+    Notif->next = _sRTOSNotifPriorityQueue;
+    _sRTOSNotifPriorityQueue = Notif;
+
+    return srTrue;
+  }
+
+  sTaskNotification_t *currentNotif = _sRTOSNotifPriorityQueue;
+  while (currentNotif->next)
+  {
+    sTaskNotification_t *nextNotif = currentNotif->next;
+    if (nextNotif->priority <= priority)
+    {
+      currentNotif->next = Notif;
+      Notif->next = nextNotif;
+
+      return srTrue;
+    }
+    currentNotif = nextNotif;
+  }
+
+  currentNotif->next = Notif;
+  return srTrue;
+}
+
+sTaskNotification_t *_checkoutHighestPriorityNotif()
+{
+  sTaskNotification_t *Notif = _sRTOSNotifPriorityQueue;
+
+  return Notif;
+}
+
+// user most free the notification him self
+sTaskNotification_t *_popHighestPriorityNotif()
+{
+  sTaskNotification_t *Notif = _sRTOSNotifPriorityQueue;
+  if (Notif == NULL)
+    return NULL;
+
+  _sRTOSNotifPriorityQueue = Notif->next;
+
+  return Notif;
+}

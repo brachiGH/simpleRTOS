@@ -104,4 +104,19 @@ typedef struct
   sTaskHandle_t *requesterHandle;
 } sMutex_t;
 
+typedef enum
+{
+  sNotificationEmpty,
+  sNotificationMutex
+} sNotificationType_t;
+
+typedef struct sTaskNotification_t
+{
+  sTaskHandle_t *task;
+  sPriority_t priority;
+  struct sTaskNotification_t *next;
+  sUBaseType_t message;
+  sNotificationType_t type;
+} sTaskNotification_t;
+
 #endif /* SIMPLERTOSTYPES_H_ */

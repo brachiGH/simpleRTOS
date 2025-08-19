@@ -13,6 +13,10 @@
 
 #define __ICSR (*((volatile uint32_t *)0xE000ED04))
 
+void SysTick_Handler(void);
+void SVC_Handler(void);
+
+
 /**
   @brief   Disable IRQ Interrupts
   @attention Disables IRQ interrupts by setting the I-bit in the CPSR.
@@ -32,10 +36,6 @@ __STATIC_FORCEINLINE__ void __sCriticalRegionEnd(void)
 {
   __asm volatile("cpsie i" : : : "memory");
 }
-
-extern void SysTick_Handler(void);
-void SVC_Handler(void);
-
 
 /**
  * @brief Initializes the RTOS.

@@ -5,10 +5,8 @@
 .extern _sTickCount
 .extern _sRTOS_TaskList
 .extern _sRTOS_CurrentTask
-.extern _sRTOSSchedulerGetFirstAvailable
+.extern _sRTOSGetFirstAvailableTask
 .extern _GetTimer
-.extern _continueExecutingSysTick_Handler
-.extern _getHighestPriorityMutexWaitingTask
 .extern _sIsTimerRunning
 .extern _sQuantaCount
 .extern __sQUANTA__
@@ -86,13 +84,8 @@ SysTick_Handler:
 sScheduler_Handler:                     // r0,r1,r2,r3,r12,lr,pc,psr   saved by interrupt
     ldr     r0, =_sRTOS_CurrentTask     // the _sRTOSSchedulerGetCurrent return the current task (r0 is the return value)
     ldr     r1, [r0]
-    push    {lr}
-    bl      _getHighestPriorityMutexWaitingTask
-    pop     {lr}
-    cmp     r0, #0
-    bne     switchToRunningfirstAbleTask
     push    {lr}                        // save return address
-    bl	    _sRTOSSchedulerGetFirstAvailable //
+    bl	    _sRTOSGetFirstAvailableTask // returns the first highest ready task
     pop     {lr}                        // restore return address
     ldr     r3, [r1, #4]                // r3 = CurrentTask->nextTask
     // r1 = currentTask, r0 = firstAvbleTask, r3 = nextTask
@@ -106,7 +99,7 @@ sScheduler_Handler:                     // r0,r1,r2,r3,r12,lr,pc,psr   saved by 
     beq    switchToRunningNextTask
     cmp     r1, r0                      // check if current and first avaible are the same
     bne    switchToRunningfirstAbleTask
-4:  // if eq  then return execution to current task 
+    // if eq  then return execution to current task 
     cpsie   i                           // enable isr
     bx      lr                          // return the same task
 
@@ -251,6 +244,7 @@ sTimerReturn_Handler:
 .section .text.sRTOSStartScheduler,"ax",%progbits
 .type sRTOSStartScheduler, %function
 sRTOSStartScheduler:
+    cpsid   i                                   // disable isr
     ldr     r0, =_sRTOS_TaskList                //
     ldr     r2, [r0]                            //
     ldr     sp, [r2]                            //
@@ -272,9 +266,6 @@ sRTOSStartScheduler:
     strb	r1, [r2, #9]                      // change task status to sRunning
     ldr     r0, =_sRTOS_CurrentTask
     str     r2, [r0]                          // save the current task ptr
-    cpsie   i                                 // enable irq (disabled by the sRTOSInit)
-    ldr r0, =0xE000E01                        // #define SYST_CSR (*((volatile uint32_t *)0xE000E010))
-    movs r1, #7                               //
-    str r1, [r0]                              // enable clock + Enables SysTick exception + set clock source to processor clock
+    cpsie   i                                 // enable irq
     bx      lr
 .size sRTOSStartScheduler, .-sRTOSStartScheduler
