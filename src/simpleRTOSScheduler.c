@@ -22,9 +22,10 @@ extern sTaskNotification_t *_checkoutHighestPriorityNotif();
 /*************PV*****************/
 sTaskHandle_t *_sRTOS_TaskList;
 sTaskHandle_t *_sRTOS_IdleTask;
+volatile sUBaseType_t _sTicksPassedSinceLastQuanta = 0;
 
-extern sbool_t _currentTaskHasNotif;
-extern sUBaseType_t volatile _sTickCount;
+extern volatile sbool_t _currentTaskHasNotif;
+extern volatile sUBaseType_t _sTickCount;
 /********************************/
 
 void _idle(void *)
@@ -126,6 +127,7 @@ sTaskHandle_t *_sRTOSGetFirstAvailableTask(void)
 {
   sTaskHandle_t *task = _sRTOS_TaskList;
   sTaskNotification_t *taskWithNotificataion = _checkoutHighestPriorityNotif();
+
   while (task)
   {
     if ((task->status == sReady || task->status == sRunning) && task->dontRunUntil <= _sTickCount)
@@ -144,7 +146,14 @@ sTaskHandle_t *_sRTOSGetFirstAvailableTask(void)
         }
         return taskWithNotificataion->task;
       }
-      return task;
+
+      if (_sTicksPassedSinceLastQuanta == __sQUANTA) // if a quanta has passed then execute another task
+      {
+        _sTicksPassedSinceLastQuanta = 0;
+        return task;
+      }
+      // else keep executing same task
+      return NULL;
     }
     task = task->nextTask;
   }

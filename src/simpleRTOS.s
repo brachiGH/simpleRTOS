@@ -8,8 +8,7 @@
 .extern _sRTOSGetFirstAvailableTask
 .extern _GetTimer
 .extern _sIsTimerRunning
-.extern _sQuantaCount
-.extern __sQUANTA__
+.extern _sTicksPassedSinceLastQuanta
 .global SysTick_Handler
 .global sScheduler_Handler
 .global sRTOSStartScheduler
@@ -55,19 +54,11 @@ SysTick_Handler:
     bl      _GetTimer                   // get timer available else return null (this also decrement the timers)
     pop     {lr}
     cmp     r0, #0                      // check if NULL
-    bne     1f                      
-    // running scheduler_Handler if a quantom has passed
-    ldr     r0, =_sQuantaCount
-    ldr     r1, [r0]                    // read _sQuantaCount
+    bne     1f                          // running scheduler_Handler if a quantom has passed
+    ldr     r0, =_sTicksPassedSinceLastQuanta
+    ldr     r1, [r0]                    // read _sTicksPassedSinceLastQuanta
     adds    r1, #1
-    str     r1, [r0]                    // save _sQuantaCount=_sQuantaCount+1
-    ldr     r3, =__sQUANTA__
-    ldr     r3, [r3]                    // read __sQUANTA__
-    cmp     r3, r1
-    bne     2f                          
-    // if _sQuantaCount==__sQUANTA__
-    mov     r1, 0                       
-    str     r1, [r0]                    // save _sQuantaCount=0
+    str     r1, [r0]                    // save _sTicksPassedSinceLastQuanta++
     b       sScheduler_Handler
 1:
     b       sTimer_Handler
@@ -87,6 +78,8 @@ sScheduler_Handler:                     // r0,r1,r2,r3,r12,lr,pc,psr   saved by 
     push    {lr}                        // save return address
     bl	    _sRTOSGetFirstAvailableTask // returns the first highest ready task
     pop     {lr}                        // restore return address
+    cmp     r0, #0                      // if AvailableTask is null then keep executing current task
+    beq     4f
     ldr     r3, [r1, #4]                // r3 = CurrentTask->nextTask
     // r1 = currentTask, r0 = firstAvbleTask, r3 = nextTask
     ldrb    r2, [r0, #10]               // first available task priority
@@ -98,12 +91,8 @@ sScheduler_Handler:                     // r0,r1,r2,r3,r12,lr,pc,psr   saved by 
     // note: that firstAvbleTask and nextTask could be the same Task
     beq    switchToRunningNextTask
     cmp     r1, r0                      // check if current and first avaible are the same
-    bne    switchToRunningfirstAbleTask
-    // if eq  then return execution to current task 
-    cpsie   i                           // enable isr
-    bx      lr                          // return the same task
-
-switchToRunningfirstAbleTask:
+    beq     4f
+    // if eq  then return execution to current task
     mov     r3, r0                      // changes the nextTask pointer to firstAvbleTask pointer
 switchToRunningNextTask:
     ldrb    r0, [r1, #11]               // read current saveRegiters
@@ -145,6 +134,7 @@ switchToRunningNextTask:
     pop     {r4-r7}                     //
     mov     r0, #1
     strb	r0, [r3, #11]               // change current saveRegiters to true (tell the scheduler that it has to save the registers) 
+4:
     cpsie   i                           // enable isr  
     bx      lr                          // return and start the next task
 .size sScheduler_Handler, .-sScheduler_Handler
