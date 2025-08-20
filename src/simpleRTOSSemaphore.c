@@ -71,7 +71,7 @@ sbool_t sRTOSMutexGive(sMutex_t *mux)
     return srFalse;
 
   __sCriticalRegionBegin();
-  _pushTaskNotification(mux->requesterHandle, (sUBaseType_t)NULL,
+  _pushTaskNotification(mux->requesterHandle, NULL,
                         sNotificationMutex, _sRTOS_CurrentTask->priority);
   mux->sem++;
   __sCriticalRegionEnd();
@@ -85,7 +85,7 @@ sbool_t sRTOSMutexGiveFromISR(sMutex_t *mux)
     return srFalse;
 
   __sCriticalRegionBegin();
-  _pushTaskNotification(mux->requesterHandle, (sUBaseType_t)NULL,
+  _pushTaskNotification(mux->requesterHandle, NULL,
                         sNotificationMutex, sPriorityMax); // ISRs have a higher priority then any task;
   mux->sem++;
   __sCriticalRegionEnd();
