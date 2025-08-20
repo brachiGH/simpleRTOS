@@ -160,7 +160,7 @@ void sRTOSTaskDelete(sTaskHandle_t *taskHandle)
   // the task list will add a lot of edge cases to
   // deal with, thus a lot code will be added to the scheduler
 
-  __sCriticalRegionBegin();            // in case deleted task is the next to run
+  __sCriticalRegionBegin();    // in case deleted task is the next to run
   free(taskHandle->stackBase); // only 26byte are left
   taskHandle->status = sDeleted;
   taskHandle->stackBase = NULL;

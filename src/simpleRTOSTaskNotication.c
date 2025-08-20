@@ -14,12 +14,13 @@ extern volatile sUBaseType_t _sTickCount;
 sTaskNotification_t *_sRTOSNotifPriorityQueue = NULL;
 volatile sbool_t _currentTaskHasNotif = srFalse;
 
-sbool_t _pushTaskNotification(sTaskHandle_t *task, void * message, 
-            sNotificationType_t type, sPriority_t priority)
+sbool_t _pushTaskNotification(sTaskHandle_t *task, void *message,
+                              sNotificationType_t type, sPriority_t priority)
 {
   sTaskNotification_t *Notif = malloc(sizeof(sTaskNotification_t));
-  if (Notif == NULL) return srFalse;
-  
+  if (Notif == NULL)
+    return srFalse;
+
   Notif->task = task;
   Notif->priority = priority;
   Notif->message = message;
@@ -29,7 +30,7 @@ sbool_t _pushTaskNotification(sTaskHandle_t *task, void * message,
   if (_sRTOSNotifPriorityQueue == NULL)
   {
     _sRTOSNotifPriorityQueue = Notif;
-  
+
     return srTrue;
   }
 
@@ -80,8 +81,8 @@ sTaskNotification_t *_popHighestPriorityNotif()
 
 sbool_t sRTOSTaskNotify(sTaskHandle_t *taskToNotify, sUBaseType_t message)
 {
-  return _pushTaskNotification(taskToNotify, (void *)message, 
-            sNotification, _sRTOS_CurrentTask->priority);
+  return _pushTaskNotification(taskToNotify, (void *)message,
+                               sNotification, _sRTOS_CurrentTask->priority);
 }
 
 sUBaseType_t sRTOSTaskNotifyTake(sUBaseType_t timeoutTicks)
@@ -94,7 +95,7 @@ sUBaseType_t sRTOSTaskNotifyTake(sUBaseType_t timeoutTicks)
   }
   _currentTaskHasNotif = srFalse;
 
-  sTaskNotification_t  *temp =_popHighestPriorityNotif();
+  sTaskNotification_t *temp = _popHighestPriorityNotif();
   sUBaseType_t msg = (sUBaseType_t)temp->message;
   free(temp);
   return msg;

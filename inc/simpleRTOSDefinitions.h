@@ -120,8 +120,6 @@ typedef struct sTaskNotification_t
   sNotificationType_t type;
 } sTaskNotification_t;
 
-
-
 typedef struct
 {
   sUBaseType_t maxLenght;

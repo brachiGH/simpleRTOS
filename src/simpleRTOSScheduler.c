@@ -97,11 +97,12 @@ sRTOS_StatusTypeDef sRTOSInit(sUBaseType_t BUS_FREQ)
 {
   uint32_t PRESCALER = (BUS_FREQ / __sRTOS_SENSIBILITY);
 
-  if (PRESCALER == 0) return sRTOS_ERROR; // avoid underflow
+  if (PRESCALER == 0)
+    return sRTOS_ERROR; // avoid underflow
 
-  SYST_CSR = 0;             // disable SysTick
-  SYST_CVR = 0;             // clear current value
-  SYST_RVR = ((PRESCALER) - 1) & 0x00FFFFFFu; // RVR is 24-bit
+  SYST_CSR = 0;                             // disable SysTick
+  SYST_CVR = 0;                             // clear current value
+  SYST_RVR = ((PRESCALER)-1) & 0x00FFFFFFu; // RVR is 24-bit
 
   /* set PendSV lowest, SysTick just above PendSV (use byte access to avoid endian/shift mistakes) */
   uint8_t *shpr3 = (uint8_t *)&SYSPRI3;
@@ -140,7 +141,8 @@ sTaskHandle_t *_sRTOSGetFirstAvailableTask(void)
           // When Mutex sends a notification it is not sending messages
           free(taskWithNotificataion); // this causes a after free but it is fine because this function is
                                        // run in a critical region (it won't change)
-        } else if (taskWithNotificataion->type == sNotification)
+        }
+        else if (taskWithNotificataion->type == sNotification)
         {
           _currentTaskHasNotif = srTrue;
         }
