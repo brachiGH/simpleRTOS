@@ -9,7 +9,7 @@
 #include "stdlib.h"
 #include "string.h"
 
-extern sUBaseType_t _sTickCount;
+extern volatile sUBaseType_t _sTickCount;
 extern sTaskHandle_t *_sRTOS_CurrentTask;
 
 void sRTOSQueueCreate(sQueueHandle_t *queueHandle, sUBaseType_t queueLengh, sUBaseType_t itemSize)

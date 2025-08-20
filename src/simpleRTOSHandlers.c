@@ -7,10 +7,8 @@
 
 #include "simpleRTOS.h"
 
-sUBaseType_t volatile _sTickCount = 0;
-sUBaseType_t volatile _sQuantaCount = 0;
-sUBaseType_t volatile _sIsTimerRunning = 0;
-sUBaseType_t __sQUANTA__ = __sQUANTA;
+volatile sUBaseType_t _sTickCount = 0;
+volatile sUBaseType_t _sIsTimerRunning = 0;
 
 extern void sScheduler_Handler(void);
 extern void sTimerReturn_Handler(void);

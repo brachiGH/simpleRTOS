@@ -12,7 +12,7 @@ extern sbool_t _pushTaskNotification(sTaskHandle_t *task, sUBaseType_t message,
                                      sNotificationType_t type, sPriority_t priority);
 
 extern sTaskHandle_t *_sRTOS_CurrentTask;
-extern sUBaseType_t volatile _sTickCount;
+extern volatile sUBaseType_t  _sTickCount;
 
 void sRTOSSemaphoreCreate(sSemaphore_t *sem, sBaseType_t n)
 {

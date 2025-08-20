@@ -10,7 +10,7 @@
 #include "string.h"
 extern void _deleteTask(sTaskHandle_t *task);
 extern void _insertTask(sTaskHandle_t *task);
-extern sUBaseType_t volatile _sTickCount;
+extern volatile sUBaseType_t _sTickCount;
 
 sTaskHandle_t *_sRTOS_CurrentTask;
 

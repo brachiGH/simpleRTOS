@@ -10,7 +10,7 @@
 
 sUBaseType_t _sRTOS_timerCount = 0;
 sTimerHandle_t *_sRTOS_timerLIST[__sTIMER_LIST_LENGTH] = {NULL};
-extern sUBaseType_t volatile _sIsTimerRunning;
+extern volatile sUBaseType_t _sIsTimerRunning;
 
 __STATIC_FORCEINLINE__ void _timerReturn(void *)
 {

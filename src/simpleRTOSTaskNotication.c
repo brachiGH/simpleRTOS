@@ -9,9 +9,10 @@
 #include "stdlib.h"
 
 extern sTaskHandle_t *_sRTOS_CurrentTask;
-extern sUBaseType_t _sTickCount;
+extern volatile sUBaseType_t _sTickCount;
+
 sTaskNotification_t *_sRTOSNotifPriorityQueue = NULL;
-sbool_t _currentTaskHasNotif = srFalse;
+volatile sbool_t _currentTaskHasNotif = srFalse;
 
 sbool_t _pushTaskNotification(sTaskHandle_t *task, void * message, 
             sNotificationType_t type, sPriority_t priority)
