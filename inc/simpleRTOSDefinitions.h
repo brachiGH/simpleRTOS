@@ -85,12 +85,11 @@ typedef struct tcb sTaskHandle_t;
 
 typedef struct __attribute__((packed, aligned(4)))
 {
-  sUBaseType_t *stackPt;   // Pointer to the stack
-  sUBaseType_t *stackBase; // Pointer to the Base of the stack
-  sUBaseType_t id;         // Timer id
-  sBaseType_t Period;      // Timer period (the period is relative to __sRTOS_SENSIBILITY)
-  sBaseType_t ticksElapsed;
-  sbool_t autoReload; // Timer autoReload
+  sUBaseType_t *stackPt;    // Pointer to the stack
+  sUBaseType_t *stackBase;  // Pointer to the Base of the stack
+  sUBaseType_t id;          // Timer id
+  sBaseType_t Period;       // Timer period in ticks (the period is relative to __sRTOS_SENSIBILITY)
+  sbool_t autoReload;       // Timer autoReload
   sTaskStatus_t status;
 } sTimerHandle_t;
 

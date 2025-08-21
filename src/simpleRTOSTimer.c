@@ -8,9 +8,19 @@
 #include "simpleRTOS.h"
 #include "stdlib.h"
 
-sUBaseType_t _sRTOS_timerCount = 0;
-sTimerHandle_t *_sRTOS_timerLIST[__sTIMER_LIST_LENGTH] = {NULL};
+typedef struct simpleRTOSDelay
+{
+  sTaskHandle_t *task; // set null
+  sTimerHandle_t *timer;
+  sUBaseType_t dontRunUntil; // time in ticks where the timer can start running
+  struct simpleRTOSDelay *next;
+} simpleRTOSDelay;
+
+extern void __insertDelay(simpleRTOSDelay *delay);
+extern void _removeTimerDelayList(sTimerHandle_t *timer);
+
 extern volatile sUBaseType_t _sIsTimerRunning;
+extern sUBaseType_t _sTickCount;
 
 __STATIC_FORCEINLINE__ void _timerReturn(void *)
 {
@@ -28,7 +38,19 @@ __STATIC_NAKED__ void _timerStart(sTimerHandle_t *, sTimerFunc_t timerTask)
       ::: "memory");
 }
 
-static sUBaseType_t *_taskInitStack(sTimerFunc_t timerFunc, sTimerHandle_t *arg)
+void __insertTimer(sTimerHandle_t *timerHandle)
+{
+  simpleRTOSDelay *delay = (simpleRTOSDelay *)malloc(sizeof(simpleRTOSDelay));
+
+  delay->task = NULL;
+  delay->timer = timerHandle;
+  delay->dontRunUntil = SAT_ADD_U32(_sTickCount, timerHandle->Period);
+  delay->next = NULL;
+
+  __insertDelay(delay);
+}
+
+static sUBaseType_t *__taskInitStackTimer(sTimerFunc_t timerFunc, sTimerHandle_t *arg)
 {
   sUBaseType_t stacksize = CONTEXT_STACK_SIZE + __sTIMER_TASK_STACK_DEPTH;
   sUBaseType_t *stack = (sUBaseType_t *)malloc(sizeof(sUBaseType_t) * (stacksize));
@@ -74,69 +96,6 @@ static sUBaseType_t *_taskInitStack(sTimerFunc_t timerFunc, sTimerHandle_t *arg)
   return stack;
 }
 
-sTimerHandle_t *_GetTimer()
-{
-  register sBaseType_t minTick = 1;
-  register size_t minTickIdex;
-  for (register size_t i = 0; i < __sTIMER_LIST_LENGTH; i++)
-  {
-    if (_sRTOS_timerLIST[i] != NULL && _sRTOS_timerLIST[i]->status == sReady)
-    {
-      _sRTOS_timerLIST[i]->ticksElapsed--;
-      if (minTick > _sRTOS_timerLIST[i]->ticksElapsed)
-      {
-        minTick = _sRTOS_timerLIST[i]->ticksElapsed;
-        minTickIdex = i;
-      }
-    }
-  }
-
-  if (minTick <= 0)
-  {
-    if (_sRTOS_timerLIST[minTickIdex]->autoReload == srFalse)
-      _sRTOS_timerLIST[minTickIdex]->status = sBlocked;
-
-    _sRTOS_timerLIST[minTickIdex]->ticksElapsed = _sRTOS_timerLIST[minTickIdex]->Period;
-    return _sRTOS_timerLIST[minTickIdex];
-  }
-
-  return NULL;
-}
-
-sRTOS_StatusTypeDef _insterTimer(sTimerHandle_t *timerHandle)
-{
-  sUBaseType_t i = 0;
-  while (_sRTOS_timerLIST[i] != NULL)
-  {
-    if (i == __sTIMER_LIST_LENGTH)
-    {
-      return sRTOS_TIMER_LIST_IS_FULL;
-    }
-    i++;
-  }
-
-  _sRTOS_timerLIST[i] = timerHandle;
-  _sRTOS_timerCount++;
-  return sRTOS_OK;
-}
-
-void _deleteTimer(sTimerHandle_t *timerHandle)
-{
-  sUBaseType_t i = 1;
-  while (_sRTOS_timerLIST[i] != timerHandle)
-  {
-    if (i == __sTIMER_LIST_LENGTH)
-    {
-      return;
-    }
-    i++;
-  }
-
-  _sRTOS_timerLIST[i] = NULL;
-  _sRTOS_timerCount--;
-  return;
-}
-
 sRTOS_StatusTypeDef sRTOSTimerCreate(
     sTimerFunc_t timerTask,
     sUBaseType_t id,
@@ -145,7 +104,7 @@ sRTOS_StatusTypeDef sRTOSTimerCreate(
     sTimerHandle_t *timerHandle)
 {
   // using this function thier is 7 words added to save r4-r11
-  sUBaseType_t *stack = _taskInitStack(timerTask, (void *)timerHandle);
+  sUBaseType_t *stack = __taskInitStackTimer(timerTask, (void *)timerHandle);
   if (stack == NULL)
     return sRTOS_ALLOCATION_FAILED;
 
@@ -153,11 +112,11 @@ sRTOS_StatusTypeDef sRTOSTimerCreate(
   timerHandle->stackBase = (sUBaseType_t *)stack;
   timerHandle->id = id;
   timerHandle->Period = period;
-  timerHandle->ticksElapsed = period;
   timerHandle->autoReload = (sbool_t)autoReload;
   timerHandle->status = sReady;
 
-  return _insterTimer(timerHandle);
+  __insertTimer(timerHandle);
+  return sRTOS_OK;
 }
 
 // Stopping while the timer is still running will not stop it immediately.
@@ -165,11 +124,13 @@ sRTOS_StatusTypeDef sRTOSTimerCreate(
 void sRTOSTimerStop(sTimerHandle_t *timerHandle)
 {
   timerHandle->status = sBlocked;
+  _removeTimerDelayList(timerHandle);
 }
 
 void sRTOSTimerResume(sTimerHandle_t *timerHandle)
 {
   timerHandle->status = sReady;
+  __insertTimer(timerHandle);
 }
 
 // If a NULL or invalid timerHandle is provided, no action is taken.
@@ -179,12 +140,14 @@ void sRTOSTimerResume(sTimerHandle_t *timerHandle)
 // Do NOT delete a timer until the timer is no longer in use (Because it memory is freed).
 void sRTOSTimerDelete(sTimerHandle_t *timerHandle)
 {
-  _deleteTimer(timerHandle);
+  _removeTimerDelayList(timerHandle);
   free(timerHandle->stackBase);
   free(timerHandle);
 }
 
 void sRTOSTimerUpdatePeriode(sTimerHandle_t *timerHandle, sBaseType_t period)
 {
+  _removeTimerDelayList(timerHandle);
   timerHandle->Period = period;
+  __insertTimer(timerHandle);
 }

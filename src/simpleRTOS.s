@@ -5,7 +5,6 @@
 .extern _sTickCount
 .extern _sCurrentTask
 .extern _sRTOSGetFirstAvailableTask
-.extern _GetTimer
 .extern _sCheckDelays
 .extern _sIsTimerRunning
 .extern _sTicksPassedExecutingCurrentTask
@@ -32,24 +31,17 @@ SysTick_Handler:
     ldr     r1, [r0]                    // read _sTicksPassedExecutingCurrentTask
     adds    r1, #1
     str     r1, [r0]                    // save _sTicksPassedExecutingCurrentTask++
-    push    {lr}
-    bl      _sCheckDelays
-    pop     {lr}
+
     ldr     r0, =_sIsTimerRunning       //
-    ldr     r0, [r0]                    // argument of _GetTimer
+    ldr     r0, [r0]                    // read value of _sIsTimerRunning
     cmp     r0, #1
-    beq     2f
+    beq     2f                          // if a timer if running 
     push    {lr}
-    bl      _GetTimer                   // get timer available else return null (this also decrement the timers)
+    bl      _sCheckDelays               // get timer available else return null (this also decrement the timers)
     pop     {lr}
     cmp     r0, #0                      // check if NULL
-    bne     1f                          // running scheduler_Handler if a quantom has passed
+    bne     sTimer_Handler              // running scheduler_Handler if a quantom has passed
     b       sScheduler_Handler
-1:
-    b       sTimer_Handler
-2:
-    cpsie   i                           // enable isr  
-    bx      lr                          // return
 .size SysTick_Handler, .-SysTick_Handler
 
 
@@ -252,8 +244,7 @@ sTimerReturn_Handler:
     mov     r3, lr
     bl      sTaskRestoreRegisters
     mov     lr, r3
-    cpsie   i                           // enable isr  
-    bx      lr                          // return and start the next task
+    b       sScheduler_Handler         // rerun the scheduler in case the timer run at the end of quantum (which mean that the next task should run)
 .size sTimerReturn_Handler, .-sTimerReturn_Handler
 
 
