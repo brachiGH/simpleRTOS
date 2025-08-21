@@ -60,6 +60,7 @@ void __readyTaskCounterDec(sPriority_t priority)
 // task will always be inserted in the first position.
 void _insertTask(sTaskHandle_t *task)
 {
+  __sCriticalRegionBegin();
   sPriority_t priority = task->priority;
   sUBaseType_t priorityIndex = priority + (MAX_TASK_PRIORITY_COUNT / 2); // MAX_TASK_PRIORITY_COUNT/2 is because the priority start from -16 to 15
   _readyTaskCounterInc(priority);
@@ -68,6 +69,7 @@ void _insertTask(sTaskHandle_t *task)
   if (curr == NULL)
   {
     _sTaskList[priorityIndex] = task;
+    __sCriticalRegionEnd();
     return;
   }
 
@@ -81,11 +83,13 @@ void _insertTask(sTaskHandle_t *task)
   curr->nextTask = task;
   task->nextTask = firstTask;
   _sTaskList[priorityIndex] = task;
+  __sCriticalRegionEnd();
   return;
 }
 
 void _deleteTask(sTaskHandle_t *task, sbool_t freeMem)
 {
+  __sCriticalRegionBegin();
   sPriority_t priority = task->priority;
   sUBaseType_t priorityIndex = priority + (MAX_TASK_PRIORITY_COUNT / 2);
   __readyTaskCounterDec(priority);
@@ -105,15 +109,17 @@ void _deleteTask(sTaskHandle_t *task, sbool_t freeMem)
   curr->nextTask = task->nextTask;
 
 end:
-  if (freeMem)
-  {
-    free(task->stackPt);
-    free(task);
-  }
 
   if (_sNumberOfReadyTaskPerPriority[priorityIndex] == 0)
   {
     _sTaskList[priorityIndex] = NULL;
+  }
+
+  __sCriticalRegionEnd();
+  if (freeMem)
+  {
+    free(task->stackPt);
+    free(task);
   }
   return;
 }
@@ -163,7 +169,7 @@ sTaskHandle_t *_sRTOSGetFirstAvailableTask(void)
         || priorityIndex > currentPriorityIndex        // if a higher priority task is ready run it
     )
     {
-      _sTicksPassedExecutingCurrentTask = 0;  // rest counter
+      _sTicksPassedExecutingCurrentTask = 0; // rest counter
       sTaskHandle_t *task = _sTaskList[priorityIndex];
       _sTaskList[priorityIndex] = _sTaskList[priorityIndex]->nextTask; // rotat tasks (note that the _sTaskList[priorityIndex] is circular linked list)
       return task;

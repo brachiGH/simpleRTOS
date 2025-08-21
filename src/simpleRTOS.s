@@ -21,7 +21,6 @@
 .section .text.SysTick_Handler,"ax",%progbits
 .type SysTick_Handler, %function
 SysTick_Handler:
-    cpsid   i                           // disable isr
     ldr     r0, =_sTickCount
     ldr     r1, [r0]                    // read _sTicksPassedExecutingCurrentTask
     adds    r1, #1

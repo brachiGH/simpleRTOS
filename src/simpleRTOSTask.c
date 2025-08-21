@@ -94,7 +94,7 @@ sRTOS_StatusTypeDef sRTOSTaskCreate(
    */
   taskHandle->stackPt = (sUBaseType_t *)(stack + stacksizeWords); // stack pointer, after stack frame
                                                                   // is saved onto the same stack
-  taskHandle->nextTask = taskHandle;  // if no other task rerun same task
+  taskHandle->nextTask = taskHandle;                              // if no other task rerun same task
   taskHandle->status = sReady;
   taskHandle->regitersSaved = srTrue; // Regiters are intialized on the stack by `_taskInitStack`, this means that thier are saved
   taskHandle->fps = (sbool_t)fpsMode;
@@ -108,10 +108,10 @@ sRTOS_StatusTypeDef sRTOSTaskCreate(
 void sRTOSTaskUpdatePriority(sTaskHandle_t *taskHandle, sPriority_t priority)
 {
   __sCriticalRegionBegin();
-  _deleteTask(taskHandle, srFalse);
   taskHandle->priority = priority;
+  _deleteTask(taskHandle, srFalse);
   _insertTask(taskHandle);
-  __sCriticalRegionEnd();
+  // _deleteTask and _insertTask, exit the criticalRegion at the end
 }
 
 void sRTOSTaskStop(sTaskHandle_t *taskHandle)
@@ -122,14 +122,13 @@ void sRTOSTaskStop(sTaskHandle_t *taskHandle)
     taskHandle->status = sBlocked;
     _deleteTask(taskHandle, srFalse); //  this removes the task from the list of ready to execute task but it does not free it memory
                                       // thus we can restore it
+    // _deleteTask exit the criticalRegion at the end
 
     if (taskHandle == _sCurrentTask)
     {
-      __sCriticalRegionEnd();
       sRTOSTaskYield(); // if the current task deletes itself yield
       return;
     }
-    __sCriticalRegionEnd();
   }
 }
 
@@ -144,29 +143,25 @@ void sRTOSTaskResume(sTaskHandle_t *taskHandle)
     __sCriticalRegionBegin();
     taskHandle->status = sReady;
     _insertTask(taskHandle);
+    // _insertTask, exit the criticalRegion at the end
 
     if (taskHandle->priority > _sCurrentTask->priority)
     {
-      __sCriticalRegionEnd();
       sRTOSTaskYield();
       return;
     }
-    __sCriticalRegionEnd();
   }
 }
 
 // if provided a none existing taskHandle nothing happens
 void sRTOSTaskDelete(sTaskHandle_t *taskHandle)
-{ __sCriticalRegionBegin(); 
+{
   _deleteTask(taskHandle, srTrue);
 
   // if the current task deletes itself yield
   if (taskHandle == _sCurrentTask)
   {
-    __sCriticalRegionEnd();
     sRTOSTaskYield();
     return;
   }
-
-  __sCriticalRegionEnd();
 }

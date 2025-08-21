@@ -123,14 +123,22 @@ sRTOS_StatusTypeDef sRTOSTimerCreate(
 // stop will prevent the timer from running again, until resumed
 void sRTOSTimerStop(sTimerHandle_t *timerHandle)
 {
-  timerHandle->status = sBlocked;
-  _removeTimerDelayList(timerHandle);
+  if (timerHandle->status == sReady)
+  {
+    __sCriticalRegionBegin();
+    timerHandle->status = sBlocked;
+    _removeTimerDelayList(timerHandle);
+  }
 }
 
 void sRTOSTimerResume(sTimerHandle_t *timerHandle)
 {
-  timerHandle->status = sReady;
-  __insertTimer(timerHandle);
+  if (timerHandle->status == sBlocked)
+  {
+    __sCriticalRegionBegin();
+    timerHandle->status = sReady;
+    __insertTimer(timerHandle);
+  }
 }
 
 // If a NULL or invalid timerHandle is provided, no action is taken.
@@ -147,7 +155,8 @@ void sRTOSTimerDelete(sTimerHandle_t *timerHandle)
 
 void sRTOSTimerUpdatePeriode(sTimerHandle_t *timerHandle, sBaseType_t period)
 {
-  _removeTimerDelayList(timerHandle);
+  __sCriticalRegionBegin();
   timerHandle->Period = period;
+  _removeTimerDelayList(timerHandle);
   __insertTimer(timerHandle);
 }

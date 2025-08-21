@@ -27,10 +27,12 @@ simpleRTOSDelay *__delayList = NULL;
 
 void __insertDelay(simpleRTOSDelay *delay)
 {
+  __sCriticalRegionBegin();
   if (__delayList == NULL)
   {
     __delayList = delay;
     __EarliestDelayUptime = delay->dontRunUntil;
+    __sCriticalRegionBegin();
     return;
   }
 
@@ -39,6 +41,7 @@ void __insertDelay(simpleRTOSDelay *delay)
     __EarliestDelayUptime = delay->dontRunUntil;
     delay->next = __delayList;
     __delayList = delay;
+    __sCriticalRegionBegin();
     return;
   }
 
@@ -50,6 +53,7 @@ void __insertDelay(simpleRTOSDelay *delay)
 
   delay->next = curr->next;
   curr->next = delay;
+  __sCriticalRegionBegin();
 }
 
 simpleRTOSDelay *__popFirstDelay(void)
@@ -68,15 +72,20 @@ simpleRTOSDelay *__popFirstDelay(void)
 
 void _removeTimerDelayList(sTimerHandle_t *timer)
 {
+  __sCriticalRegionBegin();
   if (__delayList == NULL)
   {
-    return ;
+    __sCriticalRegionEnd();
+    return;
   }
 
   if (__delayList->timer == timer)
   {
+    simpleRTOSDelay *temp = __delayList;
     __delayList = __delayList->next;
-    return ;
+    __sCriticalRegionEnd();
+    free(temp);
+    return;
   }
 
   simpleRTOSDelay *curr = __delayList;
@@ -84,9 +93,10 @@ void _removeTimerDelayList(sTimerHandle_t *timer)
   {
     curr = curr->next;
   }
- 
+
   simpleRTOSDelay *temp = curr->next;
   curr->next = temp->next;
+  __sCriticalRegionEnd();
   free(temp);
 }
 
@@ -98,10 +108,12 @@ void *_sCheckDelays(void)
 {
   while (__delayList != NULL && __EarliestDelayUptime <= _sTickCount)
   {
+    __sCriticalRegionBegin();
     simpleRTOSDelay *doneDelay = __popFirstDelay();
     if (doneDelay->task != NULL)
     {
       _insertTask(doneDelay->task);
+      // _insertTask will exit critical region that why the __sCriticalRegionBegin(); is called in the loop
       free(doneDelay);
     }
     else
@@ -110,7 +122,11 @@ void *_sCheckDelays(void)
       {
         doneDelay->dontRunUntil = SAT_ADD_U32(doneDelay->dontRunUntil, doneDelay->timer->Period);
         __insertDelay(doneDelay);
-      } else {
+        // __insertDelay will exit critical region
+      }
+      else
+      {
+        __sCriticalRegionEnd();
         free(doneDelay);
       }
 
@@ -133,5 +149,4 @@ void sRTOSTaskDelay(sUBaseType_t duration_ms)
   __sCriticalRegionBegin();
   __insertDelay(delay);
   sRTOSTaskStop(_sCurrentTask); // stop task yeilds when stoping the current task
-  __sCriticalRegionEnd();
 }
