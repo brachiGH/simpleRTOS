@@ -18,13 +18,13 @@ void _pushTaskNotification(sTaskHandle_t *task, sUBaseType_t *message, sPriority
   __sCriticalRegionBegin();
   if (message == NULL)
   {
-    task->hasNotification = srTrue;
+    task->hasNotification = sTrue;
     task->notificationMessage = *message;
   }
   if (task->priority < priority)
   {
     task->priority = priority;
-    _deleteTask(task, srFalse);
+    _deleteTask(task, sFalse);
     _insertTask(task);
   }
   __sCriticalRegionEnd();
@@ -44,12 +44,12 @@ sUBaseType_t sRTOSTaskNotifyTake(sUBaseType_t timeoutTicks)
     __sCriticalRegionEnd();
     if (timeoutFinish <= _sTickCount)
     {
-      return srFalse;
+      return sFalse;
     }
     sRTOSTaskYield();
     __sCriticalRegionBegin();
   }
-  _sCurrentTask->hasNotification = srFalse;
+  _sCurrentTask->hasNotification = sFalse;
 
   __sCriticalRegionEnd();
   return _sCurrentTask->notificationMessage;

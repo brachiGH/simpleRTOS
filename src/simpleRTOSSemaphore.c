@@ -34,14 +34,14 @@ sbool_t sRTOSSemaphoreTake(sSemaphore_t *sem, sUBaseType_t timeoutTicks)
     __sCriticalRegionEnd();
     if (timeoutFinish <= _sTickCount)
     {
-      return srFalse;
+      return sFalse;
     }
     __sCriticalRegionBegin();
   }
 
   (*sem)--;
   __sCriticalRegionEnd();
-  return srTrue;
+  return sTrue;
 }
 
 sbool_t sRTOSSemaphoreCooperativeTake(sSemaphore_t *sem, sUBaseType_t timeoutTicks)
@@ -53,7 +53,7 @@ sbool_t sRTOSSemaphoreCooperativeTake(sSemaphore_t *sem, sUBaseType_t timeoutTic
     __sCriticalRegionEnd();
     if (timeoutFinish <= _sTickCount)
     {
-      return srFalse;
+      return sFalse;
     }
     sRTOSTaskYield();
     __sCriticalRegionBegin();
@@ -61,7 +61,7 @@ sbool_t sRTOSSemaphoreCooperativeTake(sSemaphore_t *sem, sUBaseType_t timeoutTic
 
   (*sem)--;
   __sCriticalRegionEnd();
-  return srTrue;
+  return sTrue;
 }
 
 void sRTOSMutexCreate(sMutex_t *mux)
@@ -73,26 +73,26 @@ void sRTOSMutexCreate(sMutex_t *mux)
 sbool_t sRTOSMutexGive(sMutex_t *mux)
 {
   if (mux->sem == 1 || mux->holderHandle != _sCurrentTask)
-    return srFalse;
+    return sFalse;
 
   __sCriticalRegionBegin();
   _pushTaskNotification(mux->requesterHandle, NULL, _sCurrentTask->priority);
   mux->sem++;
   __sCriticalRegionEnd();
   sRTOSTaskYield();
-  return srTrue;
+  return sTrue;
 }
 
 sbool_t sRTOSMutexGiveFromISR(sMutex_t *mux)
 {
   if (mux->sem == 1)
-    return srFalse;
+    return sFalse;
 
   __sCriticalRegionBegin();
   _pushTaskNotification(mux->requesterHandle, NULL, sPriorityMax); // ISRs have a higher priority then any task;
   mux->sem++;
   __sCriticalRegionEnd();
-  return srTrue;
+  return sTrue;
 }
 
 sbool_t sRTOSMutexTake(sMutex_t *mux, sUBaseType_t timeoutTicks)
@@ -105,7 +105,7 @@ sbool_t sRTOSMutexTake(sMutex_t *mux, sUBaseType_t timeoutTicks)
     __sCriticalRegionEnd();
     if (timeoutFinish <= _sTickCount)
     {
-      return srFalse;
+      return sFalse;
     }
     sRTOSTaskYield();
     __sCriticalRegionBegin();
@@ -114,5 +114,5 @@ sbool_t sRTOSMutexTake(sMutex_t *mux, sUBaseType_t timeoutTicks)
   mux->holderHandle = _sCurrentTask;
   mux->sem--;
   __sCriticalRegionEnd();
-  return srTrue;
+  return sTrue;
 }

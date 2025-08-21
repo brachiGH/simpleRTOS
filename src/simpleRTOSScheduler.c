@@ -186,7 +186,7 @@ sTaskHandle_t *_sRTOSGetFirstAvailableTask(void)
       {
         // this means that the mutex or notification has change the priority of the task
         task->priority = task->originalPriority;
-        _deleteTask(task, srFalse);
+        _deleteTask(task, sFalse);
         _insertTask(task);
       }
       return task;

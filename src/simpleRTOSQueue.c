@@ -29,7 +29,7 @@ sbool_t sRTOSQueueReceive(sQueueHandle_t *queueHandle, void *itemPtr, sUBaseType
     __sCriticalRegionEnd();
     if (timeoutFinish <= _sTickCount)
     {
-      return srFalse;
+      return sFalse;
     }
     sRTOSTaskYield();
     __sCriticalRegionBegin();
@@ -41,7 +41,7 @@ sbool_t sRTOSQueueReceive(sQueueHandle_t *queueHandle, void *itemPtr, sUBaseType
   free(temp);
   queueHandle->lenght--;
   __sCriticalRegionEnd();
-  return srTrue;
+  return sTrue;
 }
 
 sbool_t sRTOSQueueSend(sQueueHandle_t *queueHandle, void *itemPtr, sUBaseType_t timeoutTicks)
@@ -53,7 +53,7 @@ sbool_t sRTOSQueueSend(sQueueHandle_t *queueHandle, void *itemPtr, sUBaseType_t 
     __sCriticalRegionEnd();
     if (timeoutFinish <= _sTickCount)
     {
-      return srFalse;
+      return sFalse;
     }
     sRTOSTaskYield();
     __sCriticalRegionBegin();
@@ -62,7 +62,7 @@ sbool_t sRTOSQueueSend(sQueueHandle_t *queueHandle, void *itemPtr, sUBaseType_t 
   if (temp == NULL)
   {
     __sCriticalRegionEnd();
-    return srFalse;
+    return sFalse;
   }
   memcpy(temp, itemPtr, queueHandle->itemSize);
   queueHandle->index++;
@@ -70,5 +70,5 @@ sbool_t sRTOSQueueSend(sQueueHandle_t *queueHandle, void *itemPtr, sUBaseType_t 
   queueHandle->items[writePos] = temp;
   queueHandle->lenght++;
   __sCriticalRegionEnd();
-  return srTrue;
+  return sTrue;
 }

@@ -97,11 +97,11 @@ sRTOS_StatusTypeDef sRTOSTaskCreate(
   taskHandle->nextTask = taskHandle;                              // if no other task rerun same task
   taskHandle->prevTask = taskHandle;
   taskHandle->status = sReady;
-  taskHandle->regitersSaved = srTrue; // Regiters are intialized on the stack by `_taskInitStack`, this means that thier are saved
+  taskHandle->regitersSaved = sTrue; // Regiters are intialized on the stack by `_taskInitStack`, this means that thier are saved
   taskHandle->fps = (sbool_t)fpsMode;
   taskHandle->priority = priority;
   taskHandle->notificationMessage = 0;
-  taskHandle->hasNotification = srFalse;
+  taskHandle->hasNotification = sFalse;
   taskHandle->originalPriority = priority;
   strncpy(taskHandle->name, name, MAX_TASK_NAME_LEN);
 
@@ -113,7 +113,7 @@ void sRTOSTaskUpdatePriority(sTaskHandle_t *taskHandle, sPriority_t priority)
 {
   __sCriticalRegionBegin();
   taskHandle->priority = priority;
-  _deleteTask(taskHandle, srFalse);
+  _deleteTask(taskHandle, sFalse);
   _insertTask(taskHandle);
   // _deleteTask and _insertTask, exit the criticalRegion at the end
 }
@@ -124,7 +124,7 @@ void sRTOSTaskStop(sTaskHandle_t *taskHandle)
   {
     __sCriticalRegionBegin();
     taskHandle->status = sBlocked;
-    _deleteTask(taskHandle, srFalse); //  this removes the task from the list of ready to execute task but it does not free it memory
+    _deleteTask(taskHandle, sFalse); //  this removes the task from the list of ready to execute task but it does not free it memory
                                       // thus we can restore it
     // _deleteTask exit the criticalRegion at the end
 
@@ -160,7 +160,7 @@ void sRTOSTaskResume(sTaskHandle_t *taskHandle)
 // if provided a none existing taskHandle nothing happens
 void sRTOSTaskDelete(sTaskHandle_t *taskHandle)
 {
-  _deleteTask(taskHandle, srTrue);
+  _deleteTask(taskHandle, sTrue);
 
   // if the current task deletes itself yield
   if (taskHandle == _sCurrentTask)

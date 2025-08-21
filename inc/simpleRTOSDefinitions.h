@@ -30,8 +30,8 @@ typedef uint32_t sUBaseType_t;
 
 typedef enum
 {
-  srFalse = 0u,
-  srTrue
+  sFalse = 0u,
+  sTrue
 } sbool_t;
 
 typedef enum

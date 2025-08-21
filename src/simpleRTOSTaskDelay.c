@@ -118,7 +118,7 @@ void *_sCheckDelays(void)
     }
     else
     {
-      if (doneDelay->timer->autoReload == srTrue)
+      if (doneDelay->timer->autoReload == sTrue)
       {
         doneDelay->dontRunUntil = SAT_ADD_U32(doneDelay->dontRunUntil, doneDelay->timer->Period);
         __insertDelay(doneDelay);

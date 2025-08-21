@@ -95,20 +95,20 @@ int main(void)
       Timer0,
       1,
       2,
-      srTrue,
+      sTrue,
       &Timer0H);
 
   sRTOSTimerCreate(
       Timer1,
       1,
       4,
-      srTrue,
+      sTrue,
       &Timer1H);
   sRTOSTimerCreate(
       Timer2,
       1,
       5,
-      srFalse,
+      sFalse,
       &Timer2H);
 
   sRTOSStartScheduler();
