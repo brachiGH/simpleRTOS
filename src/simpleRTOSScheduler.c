@@ -68,6 +68,7 @@ void _insertTask(sTaskHandle_t *task)
   sTaskHandle_t *curr = _sTaskList[priorityIndex];
   if (curr == NULL)
   {
+    task->nextTask = task;
     _sTaskList[priorityIndex] = task;
     __sCriticalRegionEnd();
     return;
