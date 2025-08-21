@@ -1,14 +1,16 @@
 # simpleRTOS
 
-This is a small RTOS designed for Cortex-M4 microcontrollers, providing features such as timers, semaphores, and mutexes, primarily for learning and experimentation. It uses a preemptive, priority-based scheduler driven by SysTick, and is designed with minimal memory footprint and straightforward configuration. 
+This is a simple RTOS designed for Cortex-M4 microcontrollers, current features are timers, semaphores, mutexes, queues, and notifications.
+
+Primarily for learning and experimentation. It can a preemptive or a non-preemptive, priority-based scheduler that uses `SysTick`, and is designed with minimal memory footprint. 
 
 Note: This is not intended for production use.
 
 ## Achitecture
 
-Tasks are stored in a linked list orded by priority.
-Tasks waiting for mutex, immdeatly run after the mutex is released
-List of timers is also used as the queue for timer waiting to run.
+- O(1) scheduler uses a ready bitmap for selecting the highest-priority runnable task.
+- 32 priority levels mapped to bits in the ready bitmap; tasks at the same level are kept in a circular doubly linked list for O(1) enqueue/dequeue and fair round-robin within that level.
+- Tasks blocked on mutexes or notifications inherit priority to mitigate priority inversion.
 
 ### Scheduler 
 
@@ -21,7 +23,7 @@ Configure the kernel in `simpleRTOSConfig.h` header:
 ```c
 /* RTOS sensibility is how responsive is the system*/
 #define __sRTOS_SENSIBILITY_10MS 100 // above 1MS all function that use MS time as input will works multiples of __sRTOS_SENSIBILITY in this case multipules of 10MS
-#define __sRTOS_SENSIBILITY_1MS 1000
+#define __sRTOS_SENSIBILITY_1MS   1000
 #define __sRTOS_SENSIBILITY_500us 2000
 #define __sRTOS_SENSIBILITY_250us 4000
 #define __sRTOS_SENSIBILITY_100us 10000
@@ -29,12 +31,12 @@ Configure the kernel in `simpleRTOSConfig.h` header:
 #define __sRTOS_SENSIBILITY __sRTOS_SENSIBILITY_500us
 /**************************************************/
 
-// #define __sUSE_PREEMPTION 1        // unavailable
-#define __sQUANTA 2                   // the quanta duration is relative to __sRTOS_SENSIBILITY
-                                      // if sensibility is 100us then 1 quanta = 100us
-                                      //(note:same priority tasks are rotate)
-#define __sTIMER_TASK_STACK_DEPTH 256 // in words
-#define __sTIMER_LIST_LENGTH 3        // Number of timers (keep the length of the list equal to the number of timer you create for best performance)
+#define __sUSE_PREEMPTION 1             // if set to 1 the scheduler became preemptive
+#define __sQUANTA 2                     // the quanta duration is relative to __sRTOS_SENSIBILITY
+                                        // if sensibility is 100us then 1 quanta = 100us
+                                        //(note:same priority tasks are rotate)
+#define __sTIMER_TASK_STACK_DEPTH 256   // in words
+#define __sNOTIFICATION_STACK_LENGTH 30 // Number of timers (keep the length of the list equal to the number of timer you create for best performance)
 #define __sMAX_DELAY 0xFFFFFFFF
 ```
 
@@ -273,6 +275,8 @@ uint32_t timercount0, timercount1, timercount2;
 sTaskHandle_t Task0H;
 sTaskHandle_t Task1H;
 sTaskHandle_t Task2H;
+sTaskHandle_t Task3H;
+sTaskHandle_t Task4H;
 sTimerHandle_t Timer0H;
 sTimerHandle_t Timer1H;
 sTimerHandle_t Timer2H;
@@ -292,13 +296,12 @@ void Timer2(sTimerHandle_t *h)
 
 void Task0(void *)
 {
-  sRTOSTaskDelay(5);
   while (1)
   {
     count0++;
-    if (count0 == 100)
+    if (count0 == 100000)
     {
-      sRTOSTaskStop(&Task0H);
+      sRTOSTaskStop(&Task4H);
     }
   }
 }
@@ -308,10 +311,6 @@ void Task1(void *)
   while (1)
   {
     count1++;
-    if (count1 == 1000)
-    {
-      sRTOSTaskResume(&Task0H);
-    }
   }
 }
 
@@ -320,9 +319,31 @@ void Task2(void *)
   while (1)
   {
     count2++;
-    if (count2 == 9000)
+  }
+}
+
+void Task3(void *)
+{
+  sRTOSTaskDelay(5);
+  while (1)
+  {
+    count3++;
+    if ((count3 % 1000) == 0)
     {
-      sRTOSTaskDelete(&Task0H);
+      sRTOSTaskDelay(5);
+    }
+  }
+}
+
+void Task4(void *)
+{
+  sRTOSTaskDelay(10);
+  while (1)
+  {
+    count4++;
+    if ((count4 % 1000) == 0)
+    {
+      sRTOSTaskDelay(5);
     }
   }
 }
@@ -332,13 +353,27 @@ int main(void)
   SystemCoreClockUpdate();
   sRTOSInit(SystemCoreClock);
 
-  sRTOSTaskCreate(Task0,
-                  "Task0",
+  sRTOSTaskCreate(Task4,
+                  "Task4",
                   NULL,
                   128,
                   sPriorityHigh,
-                  &Task0H,
-                  srFALSE);
+                  &Task4H,
+                  sFalse);
+  sRTOSTaskCreate(Task3,
+                  "Task3",
+                  NULL,
+                  128,
+                  sPriorityHigh,
+                  &Task3H,
+                  sFalse);
+  sRTOSTaskCreate(Task2,
+                  "Task2",
+                  NULL,
+                  128,
+                  sPriorityNormal,
+                  &Task2H,
+                  sTrue);
 
   sRTOSTaskCreate(Task1,
                   "Task1",
@@ -346,27 +381,26 @@ int main(void)
                   128,
                   sPriorityNormal,
                   &Task1H,
-                  srTRUE);
-
-  sRTOSTaskCreate(Task2,
-                  "Task2",
+                  sTrue);
+  sRTOSTaskCreate(Task0,
+                  "Task0",
                   NULL,
                   128,
                   sPriorityNormal,
-                  &Task2H,
-                  srTRUE);
+                  &Task0H,
+                  sFalse);
 
   sRTOSTimerCreate(
       Timer0,
       1,
-      2,
+      80,
       sTrue,
       &Timer0H);
 
   sRTOSTimerCreate(
       Timer1,
       1,
-      4,
+      160,
       sTrue,
       &Timer1H);
   sRTOSTimerCreate(

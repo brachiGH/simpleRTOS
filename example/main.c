@@ -8,6 +8,8 @@ uint32_t timercount0, timercount1, timercount2;
 sTaskHandle_t Task0H;
 sTaskHandle_t Task1H;
 sTaskHandle_t Task2H;
+sTaskHandle_t Task3H;
+sTaskHandle_t Task4H;
 sTimerHandle_t Timer0H;
 sTimerHandle_t Timer1H;
 sTimerHandle_t Timer2H;
@@ -27,13 +29,12 @@ void Timer2(sTimerHandle_t *h)
 
 void Task0(void *)
 {
-  sRTOSTaskDelay(5);
   while (1)
   {
     count0++;
-    if (count0 == 100)
+    if (count0 == 100000)
     {
-      sRTOSTaskStop(&Task0H);
+      sRTOSTaskStop(&Task4H);
     }
   }
 }
@@ -43,10 +44,6 @@ void Task1(void *)
   while (1)
   {
     count1++;
-    if (count1 == 1000)
-    {
-      sRTOSTaskResume(&Task0H);
-    }
   }
 }
 
@@ -55,9 +52,31 @@ void Task2(void *)
   while (1)
   {
     count2++;
-    if (count2 == 9000)
+  }
+}
+
+void Task3(void *)
+{
+  sRTOSTaskDelay(5);
+  while (1)
+  {
+    count3++;
+    if ((count3 % 1000) == 0)
     {
-      sRTOSTaskDelete(&Task0H);
+      sRTOSTaskDelay(5);
+    }
+  }
+}
+
+void Task4(void *)
+{
+  sRTOSTaskDelay(10);
+  while (1)
+  {
+    count4++;
+    if ((count4 % 1000) == 0)
+    {
+      sRTOSTaskDelay(5);
     }
   }
 }
@@ -67,13 +86,27 @@ int main(void)
   SystemCoreClockUpdate();
   sRTOSInit(SystemCoreClock);
 
-  sRTOSTaskCreate(Task0,
-                  "Task0",
+  sRTOSTaskCreate(Task4,
+                  "Task4",
                   NULL,
                   128,
                   sPriorityHigh,
-                  &Task0H,
-                  srFALSE);
+                  &Task4H,
+                  sFalse);
+  sRTOSTaskCreate(Task3,
+                  "Task3",
+                  NULL,
+                  128,
+                  sPriorityHigh,
+                  &Task3H,
+                  sFalse);
+  sRTOSTaskCreate(Task2,
+                  "Task2",
+                  NULL,
+                  128,
+                  sPriorityNormal,
+                  &Task2H,
+                  sTrue);
 
   sRTOSTaskCreate(Task1,
                   "Task1",
@@ -81,27 +114,26 @@ int main(void)
                   128,
                   sPriorityNormal,
                   &Task1H,
-                  srTRUE);
-
-  sRTOSTaskCreate(Task2,
-                  "Task2",
+                  sTrue);
+  sRTOSTaskCreate(Task0,
+                  "Task0",
                   NULL,
                   128,
                   sPriorityNormal,
-                  &Task2H,
-                  srTRUE);
+                  &Task0H,
+                  sFalse);
 
   sRTOSTimerCreate(
       Timer0,
       1,
-      2,
+      80,
       sTrue,
       &Timer0H);
 
   sRTOSTimerCreate(
       Timer1,
       1,
-      4,
+      160,
       sTrue,
       &Timer1H);
   sRTOSTimerCreate(
