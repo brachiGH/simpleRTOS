@@ -46,7 +46,7 @@ void __insertDelay(simpleRTOSDelay *delay)
   }
 
   simpleRTOSDelay *curr = __delayList;
-  while (curr->next && curr->next->dontRunUntil <= delay->dontRunUntil)
+  while (curr->next && curr->next->dontRunUntil < delay->dontRunUntil)
   {
     curr = curr->next;
   }
