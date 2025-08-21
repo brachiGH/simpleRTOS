@@ -95,10 +95,14 @@ sRTOS_StatusTypeDef sRTOSTaskCreate(
   taskHandle->stackPt = (sUBaseType_t *)(stack + stacksizeWords); // stack pointer, after stack frame
                                                                   // is saved onto the same stack
   taskHandle->nextTask = taskHandle;                              // if no other task rerun same task
+  taskHandle->prevTask = taskHandle;
   taskHandle->status = sReady;
   taskHandle->regitersSaved = srTrue; // Regiters are intialized on the stack by `_taskInitStack`, this means that thier are saved
   taskHandle->fps = (sbool_t)fpsMode;
   taskHandle->priority = priority;
+  taskHandle->message = 0;
+  taskHandle->hasNotification = srFalse;
+  taskHandle->inheritedPriority = sPriorityIdle;
   strncpy(taskHandle->name, name, MAX_TASK_NAME_LEN);
 
   _insertTask(taskHandle);
@@ -133,7 +137,7 @@ void sRTOSTaskStop(sTaskHandle_t *taskHandle)
 }
 
 /*
- * will yeild if the priority of the current running Task is lower
+ * will yield if the priority of the current running Task is lower
  * then the resumed Task
  */
 void sRTOSTaskResume(sTaskHandle_t *taskHandle)

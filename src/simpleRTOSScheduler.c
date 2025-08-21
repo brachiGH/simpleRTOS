@@ -65,25 +65,25 @@ void _insertTask(sTaskHandle_t *task)
   sUBaseType_t priorityIndex = priority + (MAX_TASK_PRIORITY_COUNT / 2); // MAX_TASK_PRIORITY_COUNT/2 is because the priority start from -16 to 15
   _readyTaskCounterInc(priority);
 
-  sTaskHandle_t *curr = _sTaskList[priorityIndex];
-  if (curr == NULL)
+  sTaskHandle_t *head = _sTaskList[priorityIndex];
+  if (head == NULL)
   {
     task->nextTask = task;
+    task->prevTask = task;
     _sTaskList[priorityIndex] = task;
     __sCriticalRegionEnd();
     return;
   }
 
-  sTaskHandle_t *firstTask = _sTaskList[priorityIndex];
-  // find the last task in the circular linked list of tasks
-  while (firstTask != curr->nextTask)
-  {
-    curr = curr->nextTask;
-  }
+  sTaskHandle_t *tail = head->prevTask;
 
-  curr->nextTask = task;
-  task->nextTask = firstTask;
+  // insert at first position
+  task->nextTask = head;
+  task->prevTask = tail;
+  tail->nextTask = task;
+  head->prevTask = task;
   _sTaskList[priorityIndex] = task;
+
   __sCriticalRegionEnd();
   return;
 }
@@ -95,26 +95,32 @@ void _deleteTask(sTaskHandle_t *task, sbool_t freeMem)
   sUBaseType_t priorityIndex = priority + (MAX_TASK_PRIORITY_COUNT / 2);
   __readyTaskCounterDec(priority);
 
-  sTaskHandle_t *curr = _sTaskList[priorityIndex];
-  if (curr == task)
+  sTaskHandle_t *head = _sTaskList[priorityIndex];
+
+  if (head != NULL)
   {
-    _sTaskList[priorityIndex] = curr->nextTask;
-    goto end;
+    if (head == task) // only element in list
+    {
+      _sTaskList[priorityIndex] = NULL;
+    }
+    else
+    {
+      // unlink from circular doubly-linked list
+      sTaskHandle_t *prev = task->prevTask;
+      sTaskHandle_t *next = task->nextTask;
+      prev->nextTask = next;
+      next->prevTask = prev;
+
+      if (_sTaskList[priorityIndex] == task)
+      {
+        _sTaskList[priorityIndex] = next; // move head if we removed it
+      }
+    }
   }
 
-  while (curr->nextTask != task)
-  {
-    curr = curr->nextTask;
-  }
-
-  curr->nextTask = task->nextTask;
-
-end:
-
-  if (_sNumberOfReadyTaskPerPriority[priorityIndex] == 0)
-  {
-    _sTaskList[priorityIndex] = NULL;
-  }
+  // clear links to avoid accidental use
+  task->nextTask = NULL;
+  task->prevTask = NULL;
 
   __sCriticalRegionEnd();
   if (freeMem)
@@ -167,18 +173,18 @@ sTaskHandle_t *_sRTOSGetFirstAvailableTask(void)
     priorityIndex = MAX_TASK_PRIORITY_COUNT - (leadingZeros + 1);
 
     if (
-      #if __sUSE_PREEMPTION == 1
-      _sTicksPassedExecutingCurrentTask >= __sQUANTA // if a quanta has passed then execute another task
-      
-      || priorityIndex > currentPriorityIndex        // if a higher priority task is ready run it
-      #else
-      1
-      #endif
+#if __sUSE_PREEMPTION == 1
+        _sTicksPassedExecutingCurrentTask >= __sQUANTA // if a quanta has passed then execute another task
+
+        || priorityIndex > currentPriorityIndex // if a higher priority task is ready run it
+#else
+        1
+#endif
     )
     {
       _sTicksPassedExecutingCurrentTask = 0; // rest counter
       sTaskHandle_t *task = _sTaskList[priorityIndex];
-      _sTaskList[priorityIndex] = _sTaskList[priorityIndex]->nextTask; // rotat tasks (note that the _sTaskList[priorityIndex] is circular linked list)
+      _sTaskList[priorityIndex] = _sTaskList[priorityIndex]->nextTask; // rotate tasks (note that the _sTaskList[priorityIndex] is circular linked list)
       return task;
     }
 

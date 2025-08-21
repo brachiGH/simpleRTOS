@@ -78,6 +78,10 @@ __attribute__((packed, aligned(4))) struct tcb
   sPriority_t priority;
   sbool_t regitersSaved; // tells the scheduler to save the registers if true
   sUBaseType_t *stackBase;
+  struct tcb *prevTask;
+  sUBaseType_t message;
+  sbool_t hasNotification;
+  sPriority_t inheritedPriority;
   char name[12];
 };
 
