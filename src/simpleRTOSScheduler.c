@@ -160,42 +160,36 @@ sRTOS_StatusTypeDef sRTOSInit(sUBaseType_t BUS_FREQ)
 
 sTaskHandle_t *_sRTOSGetFirstAvailableTask(void)
 {
-  if (_sTaskPriorityBitField != 0)
-  {
-    sUBaseType_t currentPriorityIndex = _sCurrentTask->priority + (MAX_TASK_PRIORITY_COUNT / 2);
 
-    sUBaseType_t priorityIndex; // priorityIndex of what cloud be the next task of execute
-    unsigned int leadingZeros = __builtin_clz((unsigned int)_sTaskPriorityBitField);
-    priorityIndex = MAX_TASK_PRIORITY_COUNT - (leadingZeros + 1);
+  sUBaseType_t currentPriorityIndex = _sCurrentTask->priority + (MAX_TASK_PRIORITY_COUNT / 2);
 
-    if (
+  sUBaseType_t priorityIndex; // priorityIndex of what cloud be the next task of execute
+  unsigned int leadingZeros = __builtin_clz((unsigned int)_sTaskPriorityBitField);
+  priorityIndex = MAX_TASK_PRIORITY_COUNT - (leadingZeros + 1);
+
+  if (
 #if __sUSE_PREEMPTION == 1
-        _sTicksPassedExecutingCurrentTask >= __sQUANTA // if a quanta has passed then execute another task
+      _sTicksPassedExecutingCurrentTask >= __sQUANTA // if a quanta has passed then execute another task
 
-        || priorityIndex > currentPriorityIndex // if a higher priority task is ready run it
+      || priorityIndex > currentPriorityIndex // if a higher priority task is ready run it
 #else
-        1
+      1
 #endif
-    )
-    {
-      _sTicksPassedExecutingCurrentTask = 0; // rest counter
-      sTaskHandle_t *task = _sTaskList[priorityIndex];
-      _sTaskList[priorityIndex] = _sTaskList[priorityIndex]->nextTask; // rotate tasks (note that the _sTaskList[priorityIndex] is circular linked list)
-
-      if (task->priority != task->originalPriority)
-      {
-        // this means that the mutex or notification has change the priority of the task
-        task->priority = task->originalPriority;
-        _deleteTask(task, sFalse);
-        _insertTask(task);
-      }
-      return task;
-    }
-
-    return NULL; // else keep executing current task
-  }
-  else
+  )
   {
-    return __IdleTask;
+    _sTicksPassedExecutingCurrentTask = 0; // rest counter
+    sTaskHandle_t *task = _sTaskList[priorityIndex];
+    _sTaskList[priorityIndex] = _sTaskList[priorityIndex]->nextTask; // rotate tasks (note that the _sTaskList[priorityIndex] is circular linked list)
+
+    if (task->priority != task->originalPriority)
+    {
+      // this means that the mutex or notification has change the priority of the task
+      task->priority = task->originalPriority;
+      _deleteTask(task, sFalse);
+      _insertTask(task);
+    }
+    return task;
   }
+
+  return NULL; // else keep executing current task
 }
