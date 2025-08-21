@@ -16,9 +16,6 @@
 
 #define SYSPRI3 (*((volatile uint32_t *)0xE000ED20))
 
-extern sTaskNotification_t *_popHighestPriorityNotif();
-extern sTaskNotification_t *_checkoutHighestPriorityNotif();
-
 /*************PV*****************/
 volatile sUBaseType_t _sTaskPriorityBitField = 0x0; // each bit represent a priority if set to 1 then thier are tasks to execute with that priority
 sTaskHandle_t *_sTaskList[MAX_TASK_PRIORITY_COUNT] = {NULL};
@@ -27,7 +24,6 @@ sTaskHandle_t *__IdleTask;
 volatile sUBaseType_t _sTicksPassedExecutingCurrentTask = __sQUANTA; // set to __sQUANTA so the scheduler can begin without waiting for a quantum of time to pass
 
 sTaskHandle_t *_sCurrentTask;
-extern volatile sbool_t _currentTaskHasNotif;
 extern volatile sUBaseType_t _sTickCount;
 /********************************/
 
@@ -185,6 +181,14 @@ sTaskHandle_t *_sRTOSGetFirstAvailableTask(void)
       _sTicksPassedExecutingCurrentTask = 0; // rest counter
       sTaskHandle_t *task = _sTaskList[priorityIndex];
       _sTaskList[priorityIndex] = _sTaskList[priorityIndex]->nextTask; // rotate tasks (note that the _sTaskList[priorityIndex] is circular linked list)
+
+      if (task->priority != task->originalPriority)
+      {
+        // this means that the mutex or notification has change the priority of the task
+        task->priority = task->originalPriority;
+        _deleteTask(task, srFalse);
+        _insertTask(task);
+      }
       return task;
     }
 

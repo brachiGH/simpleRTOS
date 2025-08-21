@@ -8,94 +8,49 @@
 #include "simpleRTOS.h"
 #include "stdlib.h"
 
+extern void _deleteTask(sTaskHandle_t *task, sbool_t freeMem);
+
 extern sTaskHandle_t *_sCurrentTask;
 extern volatile sUBaseType_t _sTickCount;
 
-sTaskNotification_t *_sRTOSNotifPriorityQueue = NULL;
-volatile sbool_t _currentTaskHasNotif = srFalse;
-
-sbool_t _pushTaskNotification(sTaskHandle_t *task, void *message,
-                              sNotificationType_t type, sPriority_t priority)
+void _pushTaskNotification(sTaskHandle_t *task, sUBaseType_t *message, sPriority_t priority)
 {
-  sTaskNotification_t *Notif = malloc(sizeof(sTaskNotification_t));
-  if (Notif == NULL)
-    return srFalse;
-
-  Notif->task = task;
-  Notif->priority = priority;
-  Notif->message = message;
-  Notif->type = type;
-  Notif->next = NULL;
-
-  if (_sRTOSNotifPriorityQueue == NULL)
+  __sCriticalRegionBegin();
+  if (message == NULL)
   {
-    _sRTOSNotifPriorityQueue = Notif;
-
-    return srTrue;
+    task->hasNotification = srTrue;
+    task->notificationMessage = *message;
   }
-
-  if (_sRTOSNotifPriorityQueue->priority <= priority)
+  if (task->priority < priority)
   {
-    Notif->next = _sRTOSNotifPriorityQueue;
-    _sRTOSNotifPriorityQueue = Notif;
-
-    return srTrue;
+    task->priority = priority;
+    _deleteTask(task, srFalse);
+    _insertTask(task);
   }
-
-  sTaskNotification_t *currentNotif = _sRTOSNotifPriorityQueue;
-  while (currentNotif->next)
-  {
-    sTaskNotification_t *nextNotif = currentNotif->next;
-    if (nextNotif->priority <= priority)
-    {
-      currentNotif->next = Notif;
-      Notif->next = nextNotif;
-
-      return srTrue;
-    }
-    currentNotif = nextNotif;
-  }
-
-  currentNotif->next = Notif;
-  return srTrue;
+  __sCriticalRegionEnd();
 }
 
-sTaskNotification_t *_checkoutHighestPriorityNotif()
+void sRTOSTaskNotify(sTaskHandle_t *taskToNotify, sUBaseType_t message)
 {
-  sTaskNotification_t *Notif = _sRTOSNotifPriorityQueue;
-
-  return Notif;
-}
-
-// user most free the notification him self
-sTaskNotification_t *_popHighestPriorityNotif()
-{
-  sTaskNotification_t *Notif = _sRTOSNotifPriorityQueue;
-  if (Notif == NULL)
-    return NULL;
-
-  _sRTOSNotifPriorityQueue = Notif->next;
-
-  return Notif;
-}
-
-sbool_t sRTOSTaskNotify(sTaskHandle_t *taskToNotify, sUBaseType_t message)
-{
-  return _pushTaskNotification(taskToNotify, (void *)message,
-                               sNotification, _sCurrentTask->priority);
+  _pushTaskNotification(taskToNotify, (void *)message, _sCurrentTask->priority);
 }
 
 sUBaseType_t sRTOSTaskNotifyTake(sUBaseType_t timeoutTicks)
 {
-  sRTOSTaskDelay(timeoutTicks);
-  while (!_currentTaskHasNotif)
+  sUBaseType_t timeoutFinish = SAT_ADD_U32(_sTickCount, timeoutTicks);
+  __sCriticalRegionBegin();
+  while (!_sCurrentTask->hasNotification)
   {
+    __sCriticalRegionEnd();
+    if (timeoutFinish <= _sTickCount)
+    {
+      return srFalse;
+    }
     sRTOSTaskYield();
+    __sCriticalRegionBegin();
   }
-  _currentTaskHasNotif = srFalse;
+  _sCurrentTask->hasNotification = srFalse;
 
-  sTaskNotification_t *temp = _popHighestPriorityNotif();
-  sUBaseType_t msg = (sUBaseType_t)temp->message;
-  free(temp);
-  return msg;
+  __sCriticalRegionEnd();
+  return _sCurrentTask->notificationMessage;
 }

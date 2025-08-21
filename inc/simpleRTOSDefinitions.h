@@ -79,9 +79,9 @@ __attribute__((packed, aligned(4))) struct tcb
   sbool_t regitersSaved; // tells the scheduler to save the registers if true
   sUBaseType_t *stackBase;
   struct tcb *prevTask;
-  sUBaseType_t message;
+  sUBaseType_t notificationMessage;
   sbool_t hasNotification;
-  sPriority_t inheritedPriority;
+  sPriority_t originalPriority; // this save the original priority of the task before being change by mutex
   char name[12];
 };
 
@@ -106,22 +106,6 @@ typedef struct
   sTaskHandle_t *holderHandle;
   sTaskHandle_t *requesterHandle;
 } sMutex_t;
-
-typedef enum
-{
-  sNotification,
-  sNotificationEmpty,
-  sNotificationMutex,
-} sNotificationType_t;
-
-typedef struct sTaskNotification_t
-{
-  sTaskHandle_t *task;
-  sPriority_t priority;
-  struct sTaskNotification_t *next;
-  void *message;
-  sNotificationType_t type;
-} sTaskNotification_t;
 
 typedef struct
 {

@@ -204,7 +204,7 @@ sbool_t sRTOSMutexTake(sMutex_t *mux, sUBaseType_t timeoutTicks);
 
 
 sUBaseType_t sRTOSTaskNotifyTake(sUBaseType_t timeoutTicks);
-sbool_t sRTOSTaskNotify(sTaskHandle_t *taskToNotify, sUBaseType_t message);
+void sRTOSTaskNotify(sTaskHandle_t *taskToNotify, sUBaseType_t message);
 
 void sRTOSQueueCreate(sQueueHandle_t *queueHandle, sUBaseType_t queueLengh, sUBaseType_t itemSize);
 sbool_t sRTOSQueueReceive(sQueueHandle_t *queueHandle, void *itemPtr, sUBaseType_t timeoutTicks);

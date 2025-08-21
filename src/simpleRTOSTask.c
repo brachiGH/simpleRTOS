@@ -100,9 +100,9 @@ sRTOS_StatusTypeDef sRTOSTaskCreate(
   taskHandle->regitersSaved = srTrue; // Regiters are intialized on the stack by `_taskInitStack`, this means that thier are saved
   taskHandle->fps = (sbool_t)fpsMode;
   taskHandle->priority = priority;
-  taskHandle->message = 0;
+  taskHandle->notificationMessage = 0;
   taskHandle->hasNotification = srFalse;
-  taskHandle->inheritedPriority = sPriorityIdle;
+  taskHandle->originalPriority = priority;
   strncpy(taskHandle->name, name, MAX_TASK_NAME_LEN);
 
   _insertTask(taskHandle);

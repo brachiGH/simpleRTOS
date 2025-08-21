@@ -8,8 +8,7 @@
 #include "simpleRTOS.h"
 #include "stdlib.h"
 
-extern sbool_t _pushTaskNotification(sTaskHandle_t *task, sUBaseType_t message,
-                                     sNotificationType_t type, sPriority_t priority);
+extern void _pushTaskNotification(sTaskHandle_t *task, sUBaseType_t *message, sPriority_t priority);
 
 extern sTaskHandle_t *_sCurrentTask;
 extern volatile sUBaseType_t _sTickCount;
@@ -77,8 +76,7 @@ sbool_t sRTOSMutexGive(sMutex_t *mux)
     return srFalse;
 
   __sCriticalRegionBegin();
-  _pushTaskNotification(mux->requesterHandle, NULL,
-                        sNotificationMutex, _sCurrentTask->priority);
+  _pushTaskNotification(mux->requesterHandle, NULL, _sCurrentTask->priority);
   mux->sem++;
   __sCriticalRegionEnd();
   sRTOSTaskYield();
@@ -91,8 +89,7 @@ sbool_t sRTOSMutexGiveFromISR(sMutex_t *mux)
     return srFalse;
 
   __sCriticalRegionBegin();
-  _pushTaskNotification(mux->requesterHandle, NULL,
-                        sNotificationMutex, sPriorityMax); // ISRs have a higher priority then any task;
+  _pushTaskNotification(mux->requesterHandle, NULL, sPriorityMax); // ISRs have a higher priority then any task;
   mux->sem++;
   __sCriticalRegionEnd();
   return srTrue;
