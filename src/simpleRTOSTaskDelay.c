@@ -148,5 +148,5 @@ void sRTOSTaskDelay(sUBaseType_t duration_ms)
 
   __sCriticalRegionBegin();
   __insertDelay(delay);
-  sRTOSTaskStop(_sCurrentTask); // stop task yeilds when stoping the current task
+  sRTOSTaskStop(_sCurrentTask); // stop task yields when stoping the current task
 }

@@ -270,7 +270,7 @@ sRTOSStartScheduler:
 */
     cmp     r1, #1                              // check if task->fps is on
     ite     eq
-    addeq   sp, sp, #166                      // #166 represent the number of bytes used to restore the register if floating point mode is on
+    addeq   sp, sp, #166                        // #166 represent the number of bytes used to restore the register if floating point mode is on
     addne   sp, sp, #32                         // #31 epresent the number of bytes used to restore the register if floating point mode is off
     add     sp, sp, #24 
     pop     {r1}                                // pop the address of the task to execute
