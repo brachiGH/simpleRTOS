@@ -9,6 +9,7 @@
 #include "stdlib.h"
 
 extern void _deleteTask(sTaskHandle_t *task, sbool_t freeMem);
+extern void _insertTask(sTaskHandle_t *task);
 
 extern sTaskHandle_t *_sCurrentTask;
 extern volatile sUBaseType_t _sTickCount;
