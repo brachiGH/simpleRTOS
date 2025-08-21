@@ -166,8 +166,14 @@ sTaskHandle_t *_sRTOSGetFirstAvailableTask(void)
     unsigned int leadingZeros = __builtin_clz((unsigned int)_sTaskPriorityBitField);
     priorityIndex = MAX_TASK_PRIORITY_COUNT - (leadingZeros + 1);
 
-    if (_sTicksPassedExecutingCurrentTask >= __sQUANTA // if a quanta has passed then execute another task
-        || priorityIndex > currentPriorityIndex        // if a higher priority task is ready run it
+    if (
+      #if __sUSE_PREEMPTION == 1
+      _sTicksPassedExecutingCurrentTask >= __sQUANTA // if a quanta has passed then execute another task
+      
+      || priorityIndex > currentPriorityIndex        // if a higher priority task is ready run it
+      #else
+      1
+      #endif
     )
     {
       _sTicksPassedExecutingCurrentTask = 0; // rest counter

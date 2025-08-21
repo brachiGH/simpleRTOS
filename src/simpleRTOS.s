@@ -40,7 +40,12 @@ SysTick_Handler:
     pop     {lr}
     cmp     r0, #0                      // check if NULL
     bne     sTimer_Handler              // running scheduler_Handler if a quantom has passed
+#if __sUSE_PREEMPTION == 1
     b       sScheduler_Handler
+#else
+    cpsie   i
+    bx      lr
+#endif
 .size SysTick_Handler, .-SysTick_Handler
 
 
@@ -65,9 +70,11 @@ SVC_Handler:
     bx      lr                  
 
 sScheduler_Handler_andRest:
+#if __sUSE_PREEMPTION == 1
     ldr     r1, =_sTicksPassedExecutingCurrentTask
     mov	    r2, #__sQUANTA
     str     r2, [r1]                    // rest _sTicksPassedExecutingCurrentTask
+#endif
     b       sScheduler_Handler
 .size SVC_Handler, .-SVC_Handler
 

@@ -18,12 +18,12 @@
 #define __sRTOS_SENSIBILITY __sRTOS_SENSIBILITY_500us
 /**************************************************/
 
-// #define __sUSE_PREEMPTION 1        // unavailable
-#define __sQUANTA 2                   // the quanta duration is relative to __sRTOS_SENSIBILITY
-                                      // if sensibility is 100us then 1 quanta = 100us
-                                      //(note:same priority tasks are rotate)
-#define __sTIMER_TASK_STACK_DEPTH 256 // in words
-#define __sTIMER_LIST_LENGTH 3        // Number of timers (keep the length of the list equal to the number of timer you create for best performance)
+#define __sUSE_PREEMPTION 1             // if set to 1 the scheduler became preemptive
+#define __sQUANTA 2                     // the quanta duration is relative to __sRTOS_SENSIBILITY
+                                        // if sensibility is 100us then 1 quanta = 100us
+                                        //(note:same priority tasks are rotate)
+#define __sTIMER_TASK_STACK_DEPTH 256   // in words
+#define __sNOTIFICATION_STACK_LENGTH 30 // Number of timers (keep the length of the list equal to the number of timer you create for best performance)
 #define __sMAX_DELAY 0xFFFFFFFF
 
 #endif
