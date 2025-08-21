@@ -11,7 +11,7 @@
 extern sbool_t _pushTaskNotification(sTaskHandle_t *task, sUBaseType_t message,
                                      sNotificationType_t type, sPriority_t priority);
 
-extern sTaskHandle_t *_sRTOS_CurrentTask;
+extern sTaskHandle_t *_sCurrentTask;
 extern volatile sUBaseType_t _sTickCount;
 
 void sRTOSSemaphoreCreate(sSemaphore_t *sem, sBaseType_t n)
@@ -30,10 +30,13 @@ sbool_t sRTOSSemaphoreTake(sSemaphore_t *sem, sUBaseType_t timeoutTicks)
 {
   sUBaseType_t timeoutFinish = SAT_ADD_U32(_sTickCount, timeoutTicks);
   __sCriticalRegionBegin();
-  _sRTOS_CurrentTask->dontRunUntil = timeoutFinish;
   while (*sem <= 0)
   {
     __sCriticalRegionEnd();
+    if (timeoutFinish <= _sTickCount)
+    {
+      return srFalse;
+    }
     __sCriticalRegionBegin();
   }
 
@@ -46,10 +49,13 @@ sbool_t sRTOSSemaphoreCooperativeTake(sSemaphore_t *sem, sUBaseType_t timeoutTic
 {
   sUBaseType_t timeoutFinish = SAT_ADD_U32(_sTickCount, timeoutTicks);
   __sCriticalRegionBegin();
-  _sRTOS_CurrentTask->dontRunUntil = timeoutFinish;
   while (*sem <= 0)
   {
     __sCriticalRegionEnd();
+    if (timeoutFinish <= _sTickCount)
+    {
+      return srFalse;
+    }
     sRTOSTaskYield();
     __sCriticalRegionBegin();
   }
@@ -67,12 +73,12 @@ void sRTOSMutexCreate(sMutex_t *mux)
 
 sbool_t sRTOSMutexGive(sMutex_t *mux)
 {
-  if (mux->sem == 1 || mux->holderHandle != _sRTOS_CurrentTask)
+  if (mux->sem == 1 || mux->holderHandle != _sCurrentTask)
     return srFalse;
 
   __sCriticalRegionBegin();
   _pushTaskNotification(mux->requesterHandle, NULL,
-                        sNotificationMutex, _sRTOS_CurrentTask->priority);
+                        sNotificationMutex, _sCurrentTask->priority);
   mux->sem++;
   __sCriticalRegionEnd();
   sRTOSTaskYield();
@@ -96,16 +102,19 @@ sbool_t sRTOSMutexTake(sMutex_t *mux, sUBaseType_t timeoutTicks)
 {
   sUBaseType_t timeoutFinish = SAT_ADD_U32(_sTickCount, timeoutTicks);
   __sCriticalRegionBegin();
-  mux->requesterHandle = _sRTOS_CurrentTask;
-  _sRTOS_CurrentTask->dontRunUntil = timeoutFinish;
+  mux->requesterHandle = _sCurrentTask;
   while (mux->sem <= 0)
   {
     __sCriticalRegionEnd();
+    if (timeoutFinish <= _sTickCount)
+    {
+      return srFalse;
+    }
     sRTOSTaskYield();
     __sCriticalRegionBegin();
   }
 
-  mux->holderHandle = _sRTOS_CurrentTask;
+  mux->holderHandle = _sCurrentTask;
   mux->sem--;
   __sCriticalRegionEnd();
   return srTrue;

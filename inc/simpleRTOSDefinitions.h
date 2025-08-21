@@ -21,6 +21,7 @@
 #define MIN_STACK_SIZE_NO_FPU 16
 #define MIN_STACK_SIZE_FPU 49
 #define MAX_TASK_NAME_LEN 12
+#define MAX_TASK_PRIORITY_COUNT 32
 
 #define SAT_ADD_U32(a, b) (((UINT32_MAX - (uint32_t)(a)) < (uint32_t)(b)) ? UINT32_MAX : (uint32_t)((uint32_t)(a) + (uint32_t)(b)))
 
@@ -46,13 +47,13 @@ typedef enum
 
 enum
 {
-  sPriorityIdle = -128,
+  sPriorityIdle = -16,
   sPriorityLow = -2,
   sPriorityBelowNormal = -1,
   sPriorityNormal = 0,
-  sPriorityAboveNormal = +1,
-  sPriorityHigh = +2,
-  sPriorityRealtime = +127
+  sPriorityAboveNormal = 1,
+  sPriorityHigh = 2,
+  sPriorityRealtime = 15
 };
 
 #define sPriorityMin sPriorityIdle
@@ -75,9 +76,8 @@ __attribute__((packed, aligned(4))) struct tcb
   sbool_t fps; // floating-point state
   sTaskStatus_t status;
   sPriority_t priority;
-  sbool_t saveRegiters; // tells the scheduler to save the registers if true
+  sbool_t regitersSaved; // tells the scheduler to save the registers if true
   sUBaseType_t *stackBase;
-  sUBaseType_t dontRunUntil; // time in ticks where the task can start running
   char name[12];
 };
 

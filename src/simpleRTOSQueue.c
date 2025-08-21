@@ -10,7 +10,7 @@
 #include "string.h"
 
 extern volatile sUBaseType_t _sTickCount;
-extern sTaskHandle_t *_sRTOS_CurrentTask;
+extern sTaskHandle_t *_sCurrentTask;
 
 void sRTOSQueueCreate(sQueueHandle_t *queueHandle, sUBaseType_t queueLengh, sUBaseType_t itemSize)
 {
@@ -24,10 +24,13 @@ sbool_t sRTOSQueueReceive(sQueueHandle_t *queueHandle, void *itemPtr, sUBaseType
 {
   sUBaseType_t timeoutFinish = SAT_ADD_U32(_sTickCount, timeoutTicks);
   __sCriticalRegionBegin();
-  _sRTOS_CurrentTask->dontRunUntil = timeoutFinish;
   while (queueHandle->lenght == 0)
   {
     __sCriticalRegionEnd();
+    if (timeoutFinish <= _sTickCount)
+    {
+      return srFalse;
+    }
     sRTOSTaskYield();
     __sCriticalRegionBegin();
   }
@@ -45,10 +48,13 @@ sbool_t sRTOSQueueSend(sQueueHandle_t *queueHandle, void *itemPtr, sUBaseType_t 
 {
   sUBaseType_t timeoutFinish = SAT_ADD_U32(_sTickCount, timeoutTicks);
   __sCriticalRegionBegin();
-  _sRTOS_CurrentTask->dontRunUntil = timeoutFinish;
   while (queueHandle->lenght == queueHandle->maxLenght)
   {
     __sCriticalRegionEnd();
+    if (timeoutFinish <= _sTickCount)
+    {
+      return srFalse;
+    }
     sRTOSTaskYield();
     __sCriticalRegionBegin();
   }

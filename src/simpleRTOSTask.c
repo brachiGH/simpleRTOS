@@ -8,11 +8,11 @@
 #include "simpleRTOS.h"
 #include "stdlib.h"
 #include "string.h"
-extern void _deleteTask(sTaskHandle_t *task);
+
+extern void _deleteTask(sTaskHandle_t *task, sbool_t freeMem);
 extern void _insertTask(sTaskHandle_t *task);
 extern volatile sUBaseType_t _sTickCount;
-
-sTaskHandle_t *_sRTOS_CurrentTask;
+extern sTaskHandle_t *_sCurrentTask;
 
 __STATIC_NAKED__ void _taskReturn(void *)
 {
@@ -94,12 +94,11 @@ sRTOS_StatusTypeDef sRTOSTaskCreate(
    */
   taskHandle->stackPt = (sUBaseType_t *)(stack + stacksizeWords); // stack pointer, after stack frame
                                                                   // is saved onto the same stack
-  taskHandle->nextTask = NULL;
+  taskHandle->nextTask = taskHandle;  // if no other task rerun same task
   taskHandle->status = sReady;
-  taskHandle->saveRegiters = srTrue;
+  taskHandle->regitersSaved = srTrue; // Regiters are intialized on the stack by `_taskInitStack`, this means that thier are saved
   taskHandle->fps = (sbool_t)fpsMode;
   taskHandle->priority = priority;
-  taskHandle->dontRunUntil = 0;
   strncpy(taskHandle->name, name, MAX_TASK_NAME_LEN);
 
   _insertTask(taskHandle);
@@ -109,7 +108,7 @@ sRTOS_StatusTypeDef sRTOSTaskCreate(
 void sRTOSTaskUpdatePriority(sTaskHandle_t *taskHandle, sPriority_t priority)
 {
   __sCriticalRegionBegin();
-  _deleteTask(taskHandle);
+  _deleteTask(taskHandle, srFalse);
   taskHandle->priority = priority;
   _insertTask(taskHandle);
   __sCriticalRegionEnd();
@@ -121,8 +120,10 @@ void sRTOSTaskStop(sTaskHandle_t *taskHandle)
   {
     __sCriticalRegionBegin();
     taskHandle->status = sBlocked;
+    _deleteTask(taskHandle, srFalse); //  this removes the task from the list of ready to execute task but it does not free it memory
+                                      // thus we can restore it
 
-    if (taskHandle == _sRTOS_CurrentTask)
+    if (taskHandle == _sCurrentTask)
     {
       __sCriticalRegionEnd();
       sRTOSTaskYield(); // if the current task deletes itself yield
@@ -142,8 +143,9 @@ void sRTOSTaskResume(sTaskHandle_t *taskHandle)
   {
     __sCriticalRegionBegin();
     taskHandle->status = sReady;
+    _insertTask(taskHandle);
 
-    if (taskHandle->priority > _sRTOS_CurrentTask->priority)
+    if (taskHandle->priority > _sCurrentTask->priority)
     {
       __sCriticalRegionEnd();
       sRTOSTaskYield();
@@ -155,19 +157,11 @@ void sRTOSTaskResume(sTaskHandle_t *taskHandle)
 
 // if provided a none existing taskHandle nothing happens
 void sRTOSTaskDelete(sTaskHandle_t *taskHandle)
-{
-  // _deleteTask(taskHandle); // because of the design, deleting the task from
-  // the task list will add a lot of edge cases to
-  // deal with, thus a lot code will be added to the scheduler
+{ __sCriticalRegionBegin(); 
+  _deleteTask(taskHandle, srTrue);
 
-  __sCriticalRegionBegin();    // in case deleted task is the next to run
-  free(taskHandle->stackBase); // only 26byte are left
-  taskHandle->status = sDeleted;
-  taskHandle->stackBase = NULL;
-  taskHandle->stackPt = NULL;
-  taskHandle->saveRegiters = srFALSE;
   // if the current task deletes itself yield
-  if (taskHandle == _sRTOS_CurrentTask)
+  if (taskHandle == _sCurrentTask)
   {
     __sCriticalRegionEnd();
     sRTOSTaskYield();
@@ -175,11 +169,4 @@ void sRTOSTaskDelete(sTaskHandle_t *taskHandle)
   }
 
   __sCriticalRegionEnd();
-}
-
-// only works on task not timers
-void sRTOSTaskDelay(sUBaseType_t duration_ms)
-{
-  _sRTOS_CurrentTask->dontRunUntil = SAT_ADD_U32(_sTickCount, (duration_ms * (__sRTOS_SENSIBILITY / 1000)));
-  sRTOSTaskYield();
 }

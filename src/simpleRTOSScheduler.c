@@ -20,10 +20,13 @@ extern sTaskNotification_t *_popHighestPriorityNotif();
 extern sTaskNotification_t *_checkoutHighestPriorityNotif();
 
 /*************PV*****************/
-sTaskHandle_t *_sRTOS_TaskList;
-sTaskHandle_t *_sRTOS_IdleTask;
-volatile sUBaseType_t _sTicksPassedSinceLastQuanta = 0;
+volatile sUBaseType_t _sTaskPriorityBitField = 0x0; // each bit represent a priority if set to 1 then thier are tasks to execute with that priority
+sTaskHandle_t *_sTaskList[MAX_TASK_PRIORITY_COUNT] = {NULL};
+sUBaseType_t _sNumberOfReadyTaskPerPriority[MAX_TASK_PRIORITY_COUNT] = {0};
+sTaskHandle_t *__IdleTask;
+volatile sUBaseType_t _sTicksPassedExecutingCurrentTask = __sQUANTA; // set to __sQUANTA so the scheduler can begin without waiting for a quantum of time to pass
 
+sTaskHandle_t *_sCurrentTask;
 extern volatile sbool_t _currentTaskHasNotif;
 extern volatile sUBaseType_t _sTickCount;
 /********************************/
@@ -36,60 +39,82 @@ void _idle(void *)
   }
 }
 
+void _readyTaskCounterInc(sPriority_t priority)
+{
+  sUBaseType_t priorityIndex = priority + (MAX_TASK_PRIORITY_COUNT / 2); // MAX_TASK_PRIORITY_COUNT/2 is because the priority start from -16 to 15
+  _sNumberOfReadyTaskPerPriority[priorityIndex]++;                       // count the number of tasks for each priority
+  _sTaskPriorityBitField |= 1u << priorityIndex;                         // set correspanding bit to 1 to tell the scheduler thier is a task to execute
+}
+
+void __readyTaskCounterDec(sPriority_t priority)
+{
+  sUBaseType_t priorityIndex = priority + (MAX_TASK_PRIORITY_COUNT / 2);
+
+  _sNumberOfReadyTaskPerPriority[priorityIndex]--;
+  if (_sNumberOfReadyTaskPerPriority[priorityIndex] == 0)
+  {
+    _sTaskPriorityBitField &= ~(1u << priorityIndex); // set correspanding bit to 0 to tell the scheduler thier is no task to execute
+  }
+}
+
+// task will always be inserted in the first position.
 void _insertTask(sTaskHandle_t *task)
 {
-  __sCriticalRegionBegin();
-  // insert as first
-  if (_sRTOS_TaskList->priority < task->priority)
+  sPriority_t priority = task->priority;
+  sUBaseType_t priorityIndex = priority + (MAX_TASK_PRIORITY_COUNT / 2); // MAX_TASK_PRIORITY_COUNT/2 is because the priority start from -16 to 15
+  _readyTaskCounterInc(priority);
+
+  sTaskHandle_t *curr = _sTaskList[priorityIndex];
+  if (curr == NULL)
   {
-    task->nextTask = _sRTOS_TaskList;
-    _sRTOS_TaskList = task;
+    _sTaskList[priorityIndex] = task;
     return;
   }
 
-  sTaskHandle_t *currentTask = _sRTOS_TaskList;
-  while (currentTask->nextTask)
+  sTaskHandle_t *firstTask = _sTaskList[priorityIndex];
+  // find the last task in the circular linked list of tasks
+  while (firstTask != curr->nextTask)
   {
-    sTaskHandle_t *nextTask = currentTask->nextTask;
-    if (nextTask->priority < task->priority)
-    {
-      task->nextTask = nextTask;
-      currentTask->nextTask = task;
-      return;
-    }
-    currentTask = nextTask;
+    curr = curr->nextTask;
   }
 
-  currentTask->nextTask = task;
-  task->nextTask = NULL;
-  __sCriticalRegionEnd();
+  curr->nextTask = task;
+  task->nextTask = firstTask;
+  _sTaskList[priorityIndex] = task;
+  return;
 }
 
-void _deleteTask(sTaskHandle_t *task)
+void _deleteTask(sTaskHandle_t *task, sbool_t freeMem)
 {
-  __sCriticalRegionBegin();
-  if (_sRTOS_TaskList == task)
+  sPriority_t priority = task->priority;
+  sUBaseType_t priorityIndex = priority + (MAX_TASK_PRIORITY_COUNT / 2);
+  __readyTaskCounterDec(priority);
+
+  sTaskHandle_t *curr = _sTaskList[priorityIndex];
+  if (curr == task)
   {
-    _sRTOS_TaskList = _sRTOS_TaskList->nextTask;
-    goto freeTask;
+    _sTaskList[priorityIndex] = curr->nextTask;
+    goto end;
   }
 
-  sTaskHandle_t *currentTask = _sRTOS_TaskList;
-  while (currentTask->nextTask)
+  while (curr->nextTask != task)
   {
-    sTaskHandle_t *nextTask = currentTask->nextTask;
-    if (nextTask == task)
-    {
-      currentTask->nextTask = nextTask->nextTask;
-      goto freeTask;
-    }
-    currentTask = nextTask;
+    curr = curr->nextTask;
   }
 
-freeTask:
-  free(task->stackPt);
-  free(task);
-  __sCriticalRegionEnd();
+  curr->nextTask = task->nextTask;
+
+end:
+  if (freeMem)
+  {
+    free(task->stackPt);
+    free(task);
+  }
+
+  if (_sNumberOfReadyTaskPerPriority[priorityIndex] == 0)
+  {
+    _sTaskList[priorityIndex] = NULL;
+  }
   return;
 }
 
@@ -109,56 +134,45 @@ sRTOS_StatusTypeDef sRTOSInit(sUBaseType_t BUS_FREQ)
   shpr3[2] = 0xFFu; // PendSV priority byte
   shpr3[3] = 0xFEu; // SysTick priority byte
 
-  _sRTOS_IdleTask = (sTaskHandle_t *)malloc(sizeof(sTaskHandle_t));
-  if (_sRTOS_IdleTask == NULL)
+  __IdleTask = (sTaskHandle_t *)malloc(sizeof(sTaskHandle_t));
+  if (__IdleTask == NULL)
   {
     return sRTOS_ALLOCATION_FAILED;
   }
-  _sRTOS_TaskList = _sRTOS_IdleTask; // idle should recall it self when thier is no other task to do
+  _sCurrentTask = __IdleTask;
   return sRTOSTaskCreate(_idle,
                          "idle task",
                          NULL,
-                         4,
+                         12,
                          sPriorityIdle,
-                         _sRTOS_IdleTask,
+                         __IdleTask,
                          srFALSE);
 }
 
 sTaskHandle_t *_sRTOSGetFirstAvailableTask(void)
 {
-  sTaskHandle_t *task = _sRTOS_TaskList;
-  sTaskNotification_t *taskWithNotificataion = _checkoutHighestPriorityNotif();
-
-  while (task)
+  if (_sTaskPriorityBitField != 0)
   {
-    if ((task->status == sReady || task->status == sRunning) && task->dontRunUntil <= _sTickCount)
+    sUBaseType_t currentPriorityIndex = _sCurrentTask->priority + (MAX_TASK_PRIORITY_COUNT / 2);
+
+    sUBaseType_t priorityIndex; // priorityIndex of what cloud be the next task of execute
+    unsigned int leadingZeros = __builtin_clz((unsigned int)_sTaskPriorityBitField);
+    priorityIndex = MAX_TASK_PRIORITY_COUNT - (leadingZeros + 1);
+
+    if (_sTicksPassedExecutingCurrentTask == __sQUANTA // if a quanta has passed then execute another task
+        || priorityIndex > currentPriorityIndex        // if a higher priority task is ready run it
+    )
     {
-      if (taskWithNotificataion && taskWithNotificataion->priority >= task->priority)
-      {
-        if (taskWithNotificataion->type == sNotificationMutex)
-        {
-          _popHighestPriorityNotif();
-          // When Mutex sends a notification it is not sending messages
-          free(taskWithNotificataion); // this causes a after free but it is fine because this function is
-                                       // run in a critical region (it won't change)
-        }
-        else if (taskWithNotificataion->type == sNotification)
-        {
-          _currentTaskHasNotif = srTrue;
-        }
-        return taskWithNotificataion->task;
-      }
-
-      if (_sTicksPassedSinceLastQuanta == __sQUANTA) // if a quanta has passed then execute another task
-      {
-        _sTicksPassedSinceLastQuanta = 0;
-        return task;
-      }
-      // else keep executing same task
-      return NULL;
+      _sTicksPassedExecutingCurrentTask = 0;  // rest counter
+      sTaskHandle_t *task = _sTaskList[priorityIndex];
+      _sTaskList[priorityIndex] = _sTaskList[priorityIndex]->nextTask; // rotat tasks (note that the _sTaskList[priorityIndex] is circular linked list)
+      return task;
     }
-    task = task->nextTask;
-  }
 
-  return _sRTOS_IdleTask;
+    return NULL; // else keep executing current task
+  }
+  else
+  {
+    return __IdleTask;
+  }
 }
