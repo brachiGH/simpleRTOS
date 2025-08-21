@@ -11,6 +11,7 @@
 
 extern void _deleteTask(sTaskHandle_t *task, sbool_t freeMem);
 extern void _insertTask(sTaskHandle_t *task);
+extern void _removeTaskDelayList(sTaskHandle_t *task);
 extern volatile sUBaseType_t _sTickCount;
 extern sTaskHandle_t *_sCurrentTask;
 
@@ -122,11 +123,19 @@ void sRTOSTaskStop(sTaskHandle_t *taskHandle)
 {
   if (taskHandle->status != sDeleted && taskHandle->status != sBlocked)
   {
+    if (taskHandle->status == sWaiting)
+    {
+      _removeTaskDelayList(taskHandle);
+    }
+    else
+    {
+      _deleteTask(taskHandle, sFalse); //  this removes the task from the list of ready to execute task but it does not free it memory
+                                       // thus we can restore it
+    }
+
     __sCriticalRegionBegin();
     taskHandle->status = sBlocked;
-    _deleteTask(taskHandle, sFalse); //  this removes the task from the list of ready to execute task but it does not free it memory
-                                      // thus we can restore it
-    // _deleteTask exit the criticalRegion at the end
+    __sCriticalRegionEnd();
 
     if (taskHandle == _sCurrentTask)
     {
@@ -144,6 +153,10 @@ void sRTOSTaskResume(sTaskHandle_t *taskHandle)
 {
   if (taskHandle->status != sDeleted && taskHandle->status != sReady)
   {
+    if (taskHandle->status == sWaiting)
+    {
+      _removeTaskDelayList(taskHandle);
+    }
     __sCriticalRegionBegin();
     taskHandle->status = sReady;
     _insertTask(taskHandle);

@@ -66,7 +66,8 @@ typedef enum
   sBlocked,
   sRunning,
   sReady,
-  sDeleted
+  sDeleted,
+  sWaiting
 } sTaskStatus_t;
 
 __attribute__((packed, aligned(4))) struct tcb

@@ -100,6 +100,36 @@ void _removeTimerDelayList(sTimerHandle_t *timer)
   free(temp);
 }
 
+void _removeTaskDelayList(sTaskHandle_t *task)
+{
+  __sCriticalRegionBegin();
+  if (__delayList == NULL)
+  {
+    __sCriticalRegionEnd();
+    return;
+  }
+
+  if (__delayList->task == task)
+  {
+    simpleRTOSDelay *temp = __delayList;
+    __delayList = __delayList->next;
+    __sCriticalRegionEnd();
+    free(temp);
+    return;
+  }
+
+  simpleRTOSDelay *curr = __delayList;
+  while (curr->next && curr->next->task != task)
+  {
+    curr = curr->next;
+  }
+
+  simpleRTOSDelay *temp = curr->next;
+  curr->next = temp->next;
+  __sCriticalRegionEnd();
+  free(temp);
+}
+
 // function check for tasks and timer that are done wainting
 // it re-insert task that are done back to the ready taskList
 // for timer it re-insert them into the __delayList if autoReload is on,
@@ -147,6 +177,9 @@ void sRTOSTaskDelay(sUBaseType_t duration_ms)
   delay->next = NULL;
 
   __sCriticalRegionBegin();
+  _sCurrentTask->status = sWaiting;
+  _deleteTask(_sCurrentTask, sFalse);
   __insertDelay(delay);
-  sRTOSTaskStop(_sCurrentTask); // stop task yields when stoping the current task
+  __sCriticalRegionEnd();
+  sRTOSTaskYield();
 }
