@@ -4,13 +4,13 @@ This is a simple RTOS designed for Cortex-M4 microcontrollers, current features 
 
 Primarily for learning and experimentation. It can a preemptive or a non-preemptive, priority-based scheduler that uses `SysTick`, and is designed with minimal memory footprint. 
 
-Note: This is not intended for production use.
+Note: This is not intended for production use. And only compiles with gcc.
 
 ## Achitecture
 
-- O(1) scheduler uses a ready bitmap for selecting the highest-priority runnable task.
-- 32 priority levels mapped to bits in the ready bitmap; tasks at the same level are kept in a circular doubly linked list for O(1) enqueue/dequeue and fair round-robin within that level.
-- Tasks blocked on mutexes or notifications inherit priority to mitigate priority inversion.
+- O(1) scheduler uses a bitmap for selecting the highest-priority runnable task.
+- 32 priority levels mapped to bits in a bitmap; tasks at the same level are kept in a circular doubly linked list for O(1) enqueue/dequeue and fair round-robin within that priority level.
+- Tasks for mutexes or notifications inherit priority to mitigate priority inversion.
 
 ### Scheduler 
 
