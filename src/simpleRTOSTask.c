@@ -121,6 +121,9 @@ void sRTOSTaskUpdatePriority(sTaskHandle_t *taskHandle, sPriority_t priority)
 
 void sRTOSTaskStop(sTaskHandle_t *taskHandle)
 {
+  if (taskHandle == NULL)
+    taskHandle = _sCurrentTask;
+
   if (taskHandle->status != sDeleted && taskHandle->status != sBlocked)
   {
     if (taskHandle->status == sWaiting)
@@ -173,6 +176,9 @@ void sRTOSTaskResume(sTaskHandle_t *taskHandle)
 // if provided a none existing taskHandle nothing happens
 void sRTOSTaskDelete(sTaskHandle_t *taskHandle)
 {
+  if (taskHandle == NULL)
+    taskHandle = _sCurrentTask;
+
   _deleteTask(taskHandle, sTrue);
 
   // if the current task deletes itself yield
