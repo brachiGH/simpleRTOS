@@ -44,221 +44,319 @@ Configure the kernel in `simpleRTOSConfig.h` header:
 ## System Control
 
 ### `sRTOSInit`
-Initializes the RTOS.
-````c
+Initializes the RTOS core infrastructure.
+```c
 sRTOS_StatusTypeDef sRTOSInit(sUBaseType_t BUS_FREQ);
-````
-- **@brief:** Initializes the RTOS.
-- **@attention:** `sRTOSInit` sets up the SysTick timer to generate interrupts every `__sRTOS_SENSIBILITY` ticks, and creates an idle task that runs when no other task is ready to execute.
+```
+- **@brief:** Configures SysTick and creates the idle task.
+- **@param `BUS_FREQ`:** Core/system clock frequency in Hz.
+- **@retval `sRTOS_OK`:** Initialization succeeded.
+- **@retval `sRTOS_ERROR`:** Initialization failed.
+- **@warning:** Must be called only once before starting the scheduler.
 
 ### `sRTOSStartScheduler`
-Starts the scheduler.
-````c
+Starts the RTOS scheduler.
+```c
 extern void sRTOSStartScheduler(void);
-````
-- **@brief:** Starts the scheduler by running the highest-priority task created and enabling the SysTick timer.
+```
+- **@brief:** Begins multitasking. This function does not return unless the scheduler is stopped.
+- **@note:** Tasks can still be created after the scheduler has started.
 
 ### `__sCriticalRegionBegin`
-Disable IRQ Interrupts.
-````c
+Enters a critical section.
+```c
 __STATIC_FORCEINLINE__ void __sCriticalRegionBegin(void);
-````
-- **@brief:** Disable IRQ Interrupts.
-- **@attention:** Disables IRQ interrupts by setting the I-bit in the CPSR. Can only be executed in Privileged modes.
+```
+- **@brief:** Disables IRQ interrupts to protect a code section from being preempted.
+- **@note:** Critical sections should be kept as short as possible.
 
 ### `__sCriticalRegionEnd`
-Enable IRQ Interrupts.
-````c
+Exits a critical section.
+```c
 __STATIC_FORCEINLINE__ void __sCriticalRegionEnd(void);
-````
-- **@brief:** Enable IRQ Interrupts.
-- **@attention:** Enables IRQ interrupts by clearing the I-bit in the CPSR. Can only be executed in Privileged modes.
+```
+- **@brief:** Re-enables IRQ interrupts.
 
 ## Task Management
 
 ### `sRTOSTaskCreate`
 Creates a new task.
-````c
+```c
 sRTOS_StatusTypeDef sRTOSTaskCreate(
-    sTaskFunc_t task,
-    char *name,
-    void *arg,
-    sUBaseType_t stacksizeWords,
-    sPriority_t priority,
-    sTaskHandle_t *taskHandle,
-    sUBaseType_t fpsMode);
-````
-- **@brief:** Creates a new task.
-- **@attention:** Tasks can still be created after `sRTOSStartScheduler()` is called. `sRTOSTaskCreate` updates the `nextTask` field in the `taskHandle`.
+  sTaskFunc_t task,
+  char *name,
+  void *arg,
+  sUBaseType_t stacksizeWords,
+  sPriority_t priority,
+  sTaskHandle_t *taskHandle,
+  sUBaseType_t fpsMode);
+```
+- **@brief:** Allocates and initializes a task control block (TCB) and stack.
+- **@param `task`:** The function that implements the task.
+- **@param `name`:** A descriptive name for the task (can be NULL).
+- **@param `arg`:** Argument passed to the task function.
+- **@param `stacksizeWords`:** Stack depth in 32-bit words.
+- **@param `priority`:** Task priority (higher value means higher priority).
+- **@param `taskHandle`:** Pointer to a handle that will reference the created task.
+- **@param `fpsMode`:** Flag for floating-point context saving.
+- **@retval `sRTOS_OK`:** Task created successfully.
+- **@retval `sRTOS_ERROR`:** Failed to create the task.
+- **@warning:** Ensure sufficient stack size is provided to prevent overflow.
 
 ### `sRTOSTaskUpdatePriority`
-Updates a task's priority.
-````c
+Changes a task's priority.
+```c
 void sRTOSTaskUpdatePriority(sTaskHandle_t *taskHandle, sPriority_t priority);
-````
-- **@brief:** Updates a task's priority.
-- **@attention:** This function can be heavy if you have many tasks. When executed, the function enters a critical region.
+```
+- **@param `taskHandle`:** The handle of the task to modify.
+- **@param `priority`:** The new priority for the task.
 
 ### `sRTOSTaskStop`
-Stops a task.
-````c
+Suspends a task.
+```c
 void sRTOSTaskStop(sTaskHandle_t *taskHandle);
-````
-- **@brief:** Stop Task.
-- **@note:** Stopping the currently running task will yield.
+```
+- **@param `taskHandle`:** The handle of the task to suspend. If NULL, the calling task is suspended.
+- **@note:** Suspending the currently running task triggers a context switch.
 
 ### `sRTOSTaskResume`
-Resumes a stopped task.
-````c
+Resumes a suspended task.
+```c
 void sRTOSTaskResume(sTaskHandle_t *taskHandle);
-````
-- **@brief:** Resume Task.
-- **@note:** Will yield if the currently running task has a lower priority than the resumed task.
+```
+- **@param `taskHandle`:** The handle of the task to resume.
+- **@note:** May cause a context switch if the resumed task has a higher priority than the current task.
 
 ### `sRTOSTaskDelete`
 Deletes a task.
-````c
+```c
 void sRTOSTaskDelete(sTaskHandle_t *taskHandle);
-````
-- **@brief:** Delete Task.
-- **@attention:** If a non-existing `taskHandle` is provided, nothing happens. 26 bytes are left from every deleted task.
-- **@note:** Deleting the currently running task will yield.
+```
+- **@param `taskHandle`:** The handle of the task to delete. If NULL, the calling task is deleted.
+- **@warning:** Do not use the task handle after the task has been deleted.
 
 ### `sRTOSTaskDelay`
-Delays a task for a specified duration.
-````c
+Delays the calling task.
+```c
 void sRTOSTaskDelay(sUBaseType_t duration_ms);
-````
-- **@note:** Only works on tasks.
+```
+- **@param `duration_ms`:** The delay duration in milliseconds.
+- **@note:** Can only be called from within a task.
 
 ### `sRTOSTaskYield`
-Manually runs the scheduler to yield the CPU.
-````c
+Yields the processor.
+```c
 __STATIC_FORCEINLINE__ void sRTOSTaskYield(void);
-````
-- **@note:** Runs the scheduler.
+```
+- **@brief:** Forces a context switch to allow other tasks to run.
+
+## Task Notifications
+
+### `sRTOSTaskNotifyTake`
+Waits for a task notification.
+```c
+sUBaseType_t sRTOSTaskNotifyTake(sUBaseType_t timeoutTicks);
+```
+- **@brief:** Blocks the calling task until a notification is received or a timeout occurs.
+- **@return:** The message value from the notification, or 0 on timeout.
+- **@warning:** Not safe to call from an ISR.
+
+### `sRTOSTaskNotify`
+Sends a notification to a task.
+```c
+void sRTOSTaskNotify(sTaskHandle_t *taskToNotify, sUBaseType_t message);
+```
+- **@param `taskToNotify`:** Handle of the task to notify.
+- **@param `message`:** A 32-bit value to send with the notification.
+- **@warning:** Not safe to call from an ISR.
+
+### `sRTOSTaskNotifyFromISR`
+Sends a notification to a task from an ISR.
+```c
+void sRTOSTaskNotifyFromISR(sTaskHandle_t *taskToNotify, sUBaseType_t message);
+```
+- **@param `taskToNotify`:** Handle of the task to notify.
+- **@param `message`:** A 32-bit value to send with the notification.
 
 ## Timer Management
 
 ### `sRTOSTimerCreate`
-Creates a new timer.
-````c
+Creates a software timer.
+```c
 sRTOS_StatusTypeDef sRTOSTimerCreate(
-    sTimerFunc_t timerTask,
-    sUBaseType_t id,
-    sBaseType_t period,
-    sUBaseType_t autoReload,
-    sTimerHandle_t *timerHandle);
-````
-- **@brief:** Creates a new timer.
-- **@attention:** Timers can still be created after `sRTOSStartScheduler()` is called.
+  sTimerFunc_t timerTask,
+  sUBaseType_t id,
+  sBaseType_t period,
+  sUBaseType_t autoReload,
+  sTimerHandle_t *timerHandle);
+```
+- **@param `timerTask`:** The callback function to execute when the timer expires.
+- **@param `id`:** A user-defined ID for the timer.
+- **@param `period`:** The timer period in ticks.
+- **@param `autoReload`:** If non-zero, the timer is periodic; otherwise, it is a one-shot timer.
+- **@param `timerHandle`:** Pointer to a handle that will reference the created timer.
+- **@retval `sRTOS_OK`:** Timer created successfully.
+- **@retval `sRTOS_ERROR`:** Failed to create the timer.
 
 ### `sRTOSTimerStop`
 Stops a timer.
-````c
+```c
 void sRTOSTimerStop(sTimerHandle_t *timerHandle);
-````
-- **@brief:** Stop Timer.
-- **@attention:** Will not stop the timer if it is already running its callback.
+```
+- **@param `timerHandle`:** The handle of the timer to stop.
 
 ### `sRTOSTimerResume`
-Resumes a stopped timer.
-````c
+Starts or resumes a timer.
+```c
 void sRTOSTimerResume(sTimerHandle_t *timerHandle);
-````
-- **@brief:** Resume Timer.
+```
+- **@param `timerHandle`:** The handle of the timer to resume.
 
 ### `sRTOSTimerDelete`
 Deletes a timer.
-````c
+```c
 void sRTOSTimerDelete(sTimerHandle_t *timerHandle);
-````
-- **@brief:** Delete Timer.
-- **@attention:** If a timer deletes itself or is deleted from an ISR, the timer continues executing until it returns. Deleting while the timer is still running causes use-after-free. Do NOT delete a timer until the timer is no longer in use (because its memory is freed).
-- **@note:** If a NULL or invalid `timerHandle` is provided, no action is taken.
+```
+- **@param `timerHandle`:** The handle of the timer to delete.
+- **@warning:** Do not delete a timer from its own callback function to avoid use-after-free issues.
 
-### `sRTOSTimerUpdatePeriode`
-Updates the period of a timer.
-````c
-void sRTOSTimerUpdatePeriode(sTimerHandle_t *timerHandle, sBaseType_t period);
-````
-- **@brief:** Update Timer Periode.
+### `sRTOSTimerUpdatePeriod`
+Updates a timer's period.
+```c
+void sRTOSTimerUpdatePeriod(sTimerHandle_t *timerHandle, sBaseType_t period);
+```
+- **@param `timerHandle`:** The handle of the timer to modify.
+- **@param `period`:** The new period in ticks.
 
 ## Semaphore Management
 
 ### `sRTOSSemaphoreCreate`
-Creates a semaphore.
-````c
+Creates a counting semaphore.
+```c
 void sRTOSSemaphoreCreate(sSemaphore_t *sem, sBaseType_t n);
-````
-- **@brief:** Create Semaphore.
+```
+- **@param `sem`:** Pointer to the semaphore object to initialize.
+- **@param `n`:** The initial count of the semaphore.
 
 ### `sRTOSSemaphoreGive`
-Gives a semaphore.
-````c
+Gives (increments) a semaphore.
+```c
 void sRTOSSemaphoreGive(sSemaphore_t *sem);
-````
-- **@brief:** Gives a semaphore.
-- **@attention:** This call will not yield.
+```
+- **@param `sem`:** The semaphore to give.
 
 ### `sRTOSSemaphoreTake`
-Takes a semaphore (non-cooperative).
-````c
+Takes a semaphore with a non-cooperative wait.
+```c
 sbool_t sRTOSSemaphoreTake(sSemaphore_t *sem, sUBaseType_t timeoutTicks);
-````
-- **@brief:** Takes a semaphore.
-- **@attention:** This call will not yield while waiting.
+```
+- **@param `sem`:** The semaphore to take.
+- **@param `timeoutTicks`:** Maximum ticks to wait (busy-wait).
+- **@retval `true`:** Semaphore was taken.
+- **@retval `false`:** Timeout occurred.
 
 ### `sRTOSSemaphoreCooperativeTake`
-Takes a semaphore (cooperative).
-````c
+Takes a semaphore with a cooperative wait.
+```c
 sbool_t sRTOSSemaphoreCooperativeTake(sSemaphore_t *sem, sUBaseType_t timeoutTicks);
-````
-- **@brief:** Takes a semaphore.
-- **@attention:** This call will yield while waiting. (Use when the timeout is longer than one time quantum.)
+```
+- **@param `sem`:** The semaphore to take.
+- **@param `timeoutTicks`:** Maximum ticks to wait (yields while waiting).
+- **@retval `true`:** Semaphore was taken.
+- **@retval `false`:** Timeout occurred.
 
 ## Mutex Management
 
 ### `sRTOSMutexCreate`
 Creates a mutex.
-````c
+```c
 void sRTOSMutexCreate(sMutex_t *mux);
-````
-- **@brief:** Create Mutex.
+```
+- **@param `mux`:** Pointer to the mutex object to initialize.
 
 ### `sRTOSMutexGive`
 Releases a mutex.
-````c
+```c
 sbool_t sRTOSMutexGive(sMutex_t *mux);
-````
-- **@brief:** Releases a mutex (only the owning task can release it).
-- **@attention:** This call will yield.
+```
+- **@param `mux`:** The mutex to release.
+- **@retval `true`:** Mutex was released.
+- **@retval `false`:** The calling task was not the owner.
+- **@note:** May cause a yield if a higher-priority task was waiting.
 
 ### `sRTOSMutexGiveFromISR`
 Releases a mutex from an ISR.
-````c
+```c
 sbool_t sRTOSMutexGiveFromISR(sMutex_t *mux);
-````
-- **@brief:** Releases a mutex without checking ownership.
-- **@attention:** This call will not yield.
+```
+- **@param `mux`:** The mutex to release.
+- **@warning:** Ownership is not checked.
 
 ### `sRTOSMutexTake`
-Takes a mutex.
-````c
+Acquires (takes) a mutex.
+```c
 sbool_t sRTOSMutexTake(sMutex_t *mux, sUBaseType_t timeoutTicks);
-````
-- **@brief:** Takes a mutex.
-- **@attention:** This call will yield while waiting.
-- **@note:** If a task successfully takes the mutex, it becomes the owner.
+```
+- **@param `mux`:** The mutex to take.
+- **@param `timeoutTicks`:** Maximum ticks to wait.
+- **@retval `true`:** Mutex was acquired.
+- **@retval `false`:** Timeout or failure.
+- **@warning:** Can lead to deadlock if not used carefully.
+
+## Queue Management
+
+### `sRTOSQueueCreate`
+Creates a queue.
+```c
+void sRTOSQueueCreate(sQueueHandle_t *queueHandle, sUBaseType_t queueLengh, sUBaseType_t itemSize);
+```
+- **@param `queueHandle`:** Pointer to the queue handle to initialize.
+- **@param `queueLengh`:** The maximum number of items the queue can hold.
+- **@param `itemSize`:** The size of each item in bytes.
+
+### `sRTOSQueueReceive`
+Receives an item from a queue.
+```c
+sbool_t sRTOSQueueReceive(sQueueHandle_t *queueHandle, void *itemPtr, sUBaseType_t timeoutTicks);
+```
+- **@param `queueHandle`:** The handle of the queue.
+- **@param `itemPtr`:** A pointer to a buffer to store the received item.
+- **@param `timeoutTicks`:** Maximum ticks to wait for an item.
+- **@retval `true`:** An item was received.
+- **@retval `false`:** Timeout occurred.
+- **@warning:** Not safe to call from an ISR.
+
+### `sRTOSQueueSend`
+Sends an item to a queue.
+```c
+sbool_t sRTOSQueueSend(sQueueHandle_t *queueHandle, void *itemPtr, sUBaseType_t timeoutTicks);
+```
+- **@param `queueHandle`:** The handle of the queue.
+- **@param `itemPtr`:** A pointer to the item to be sent.
+- **@param `timeoutTicks`:** Maximum ticks to wait for space in the queue.
+- **@retval `true`:** The item was sent.
+- **@retval `false`:** Timeout occurred.
+- **@warning:** Not safe to call from an ISR.
+
+### `sRTOSQueueSendFromISR`
+Sends an item to a queue from an ISR.
+```c
+sbool_t sRTOSQueueSendFromISR(sQueueHandle_t *queueHandle, void *itemPtr);
+```
+- **@param `queueHandle`:** The handle of the queue.
+- **@param `itemPtr`:** A pointer to the item to be sent.
+- **@retval `true`:** The item was sent.
+- **@retval `false`:** The queue was full.
 
 ## Utilities
 
 ### `srMS_TO_TICKS`
-Converts milliseconds to system ticks.
-````c
+Converts milliseconds to RTOS ticks.
+```c
 __STATIC_FORCEINLINE__ sUBaseType_t srMS_TO_TICKS(sUBaseType_t timeoutMS);
-````
-- **@brief:** MS to ticks.
+```
+- **@param `timeoutMS`:** The time in milliseconds.
+- **@return:** The equivalent time in RTOS ticks.
 
 
 ## Quick usage
