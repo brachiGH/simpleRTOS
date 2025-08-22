@@ -5,7 +5,7 @@
 .extern _sTickCount
 .extern _sCurrentTask
 .extern _sRTOSGetFirstAvailableTask
-.extern _sCheckDelays
+.extern _sCheckExpiredTimeOut
 .extern _sIsTimerRunning
 .extern _sTicksPassedExecutingCurrentTask
 .global SysTick_Handler
@@ -37,7 +37,7 @@ SysTick_Handler:
     beq     2f                          // if a timer if running 
 Timer_return:
     push    {lr}
-    bl      _sCheckDelays               // get timer available else return null (this also decrement the timers)
+    bl      _sCheckExpiredTimeOut               // get timer available else return null (this also decrement the timers)
     pop     {lr}
     cmp     r0, #0                      // check if NULL
     bne     sTimer_Handler              // running scheduler_Handler if a quantom has passed

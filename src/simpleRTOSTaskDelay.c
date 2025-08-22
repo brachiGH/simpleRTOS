@@ -135,7 +135,7 @@ void _removeTaskDelayList(sTaskHandle_t *task)
 // it re-insert task that are done back to the ready taskList
 // for timer it re-insert them into the __delayList if autoReload is on,
 // and then it returns them to tell the scheduler a time is ready to run
-void *_sCheckDelays(void)
+void *_sCheckExpiredTimeOut(void)
 {
   while (__delayList != NULL && __EarliestDelayUptime <= _sTickCount)
   {
