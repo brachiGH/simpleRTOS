@@ -36,6 +36,11 @@ void sRTOSTaskNotify(sTaskHandle_t *taskToNotify, sUBaseType_t message)
   _pushTaskNotification(taskToNotify, (void *)message, _sCurrentTask->priority);
 }
 
+void sRTOSTaskNotifyFromISR(sTaskHandle_t *taskToNotify, sUBaseType_t message)
+{
+  _pushTaskNotification(taskToNotify, (void *)message, sPriorityMax);
+}
+
 sUBaseType_t sRTOSTaskNotifyTake(sUBaseType_t timeoutTicks)
 {
   sUBaseType_t timeoutFinish = SAT_ADD_U32(_sTickCount, timeoutTicks);
