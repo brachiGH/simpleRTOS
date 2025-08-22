@@ -35,6 +35,7 @@ SysTick_Handler:
     ldr     r0, [r0]                    // read value of _sIsTimerRunning
     cmp     r0, #1
     beq     2f                          // if a timer if running 
+Timer_return:
     push    {lr}
     bl      _sCheckDelays               // get timer available else return null (this also decrement the timers)
     pop     {lr}
@@ -250,7 +251,7 @@ sTimerReturn_Handler:
     mov     r3, lr
     bl      sTaskRestoreRegisters
     mov     lr, r3
-    b       sScheduler_Handler         // rerun the scheduler in case the timer run at the end of quantum (which mean that the next task should run)
+    b       Timer_return                // rerun the scheduler in case the timer run at the end of quantum (which mean that the next task should run)
 .size sTimerReturn_Handler, .-sTimerReturn_Handler
 
 
