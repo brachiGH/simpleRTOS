@@ -152,7 +152,7 @@ void sRTOSTimerDelete(sTimerHandle_t *timerHandle)
   free(timerHandle->stackBase);
 }
 
-void sRTOSTimerUpdatePeriode(sTimerHandle_t *timerHandle, sBaseType_t period)
+void sRTOSTimerUpdatePeriod(sTimerHandle_t *timerHandle, sBaseType_t period)
 {
   __sCriticalRegionBegin();
   timerHandle->Period = period;

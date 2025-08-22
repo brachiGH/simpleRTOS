@@ -214,7 +214,7 @@ void sRTOSTimerDelete(sTimerHandle_t *timerHandle);
  * @note Takes effect for the next cycle.
  * @warning Undefined behavior if the handle is invalid.
  */
-void sRTOSTimerUpdatePeriode(sTimerHandle_t *timerHandle, sBaseType_t period);
+void sRTOSTimerUpdatePeriod(sTimerHandle_t *timerHandle, sBaseType_t period);
 
 /**
  * @brief Convert milliseconds to RTOS ticks.
