@@ -74,7 +74,7 @@ __attribute__((packed, aligned(4))) struct tcb
 {
   sUBaseType_t *stackPt;
   struct tcb *nextTask;
-  sbool_t fps; // floating-point state
+  sbool_t fps; // floating-point state. Used to indicate if the task is using the fpu.
   sTaskStatus_t status;
   sPriority_t priority;
   sbool_t regitersSaved; // tells the scheduler to save the registers if true
@@ -90,11 +90,11 @@ typedef struct tcb sTaskHandle_t;
 
 typedef struct __attribute__((packed, aligned(4)))
 {
-  sUBaseType_t *stackPt;    // Pointer to the stack
-  sUBaseType_t *stackBase;  // Pointer to the Base of the stack
-  sUBaseType_t id;          // Timer id
-  sBaseType_t Period;       // Timer period in ticks (the period is relative to __sRTOS_SENSIBILITY)
-  sbool_t autoReload;       // Timer autoReload
+  sUBaseType_t *stackPt;   // Pointer to the stack
+  sUBaseType_t *stackBase; // Pointer to the Base of the stack
+  sUBaseType_t id;         // Timer id
+  sBaseType_t Period;      // Timer period in ticks (the period is relative to __sRTOS_SENSIBILITY)
+  sbool_t autoReload;      // Timer autoReload
   sTaskStatus_t status;
 } sTimerHandle_t;
 
