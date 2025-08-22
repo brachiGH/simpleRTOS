@@ -10,6 +10,7 @@
 
 extern void _readyTaskCounterDec(sPriority_t Priority);
 extern void _insertTask(sTaskHandle_t *task);
+extern void _deleteTask(sTaskHandle_t *task, sbool_t freemem);
 
 extern volatile sUBaseType_t _sTickCount;
 extern sTaskHandle_t *_sCurrentTask;
