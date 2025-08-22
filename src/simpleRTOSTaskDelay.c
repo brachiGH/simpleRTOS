@@ -14,118 +14,118 @@ extern void _deleteTask(sTaskHandle_t *task, sbool_t freemem);
 
 extern volatile sUBaseType_t _sTickCount;
 extern sTaskHandle_t *_sCurrentTask;
-volatile sUBaseType_t __EarliestDelayUptime = 0;
+volatile sUBaseType_t __EarliestExpiringTimeout = 0;
 
-typedef struct simpleRTOSDelay
+typedef struct simpleRTOSTimeout
 {
   sTaskHandle_t *task;
   sTimerHandle_t *timer;
   sUBaseType_t dontRunUntil; // time in ticks where the task can start running
-  struct simpleRTOSDelay *next;
-} simpleRTOSDelay;
+  struct simpleRTOSTimeout *next;
+} simpleRTOSTimeout;
 
-simpleRTOSDelay *__delayList = NULL;
+simpleRTOSTimeout *__TimeoutList = NULL;
 
-void __insertDelay(simpleRTOSDelay *delay)
+void _sInsertTimeout(simpleRTOSTimeout *timeout)
 {
   __sCriticalRegionBegin();
-  if (__delayList == NULL)
+  if (__TimeoutList == NULL)
   {
-    __delayList = delay;
-    __EarliestDelayUptime = delay->dontRunUntil;
+    __TimeoutList = timeout;
+    __EarliestExpiringTimeout = timeout->dontRunUntil;
     __sCriticalRegionBegin();
     return;
   }
 
-  if (delay->dontRunUntil < __delayList->dontRunUntil)
+  if (timeout->dontRunUntil < __TimeoutList->dontRunUntil)
   {
-    __EarliestDelayUptime = delay->dontRunUntil;
-    delay->next = __delayList;
-    __delayList = delay;
+    __EarliestExpiringTimeout = timeout->dontRunUntil;
+    timeout->next = __TimeoutList;
+    __TimeoutList = timeout;
     __sCriticalRegionBegin();
     return;
   }
 
-  simpleRTOSDelay *curr = __delayList;
-  while (curr->next && curr->next->dontRunUntil < delay->dontRunUntil)
+  simpleRTOSTimeout *curr = __TimeoutList;
+  while (curr->next && curr->next->dontRunUntil < timeout->dontRunUntil)
   {
     curr = curr->next;
   }
 
-  delay->next = curr->next;
-  curr->next = delay;
+  timeout->next = curr->next;
+  curr->next = timeout;
   __sCriticalRegionBegin();
 }
 
-simpleRTOSDelay *__popFirstDelay(void)
+simpleRTOSTimeout *__popFirstDelay(void)
 {
-  if (__delayList == NULL)
+  if (__TimeoutList == NULL)
   {
     return NULL;
   }
 
-  simpleRTOSDelay *first = __delayList;
-  __delayList = first->next;
+  simpleRTOSTimeout *first = __TimeoutList;
+  __TimeoutList = first->next;
 
-  __EarliestDelayUptime = __delayList->dontRunUntil;
+  __EarliestExpiringTimeout = __TimeoutList->dontRunUntil;
   return first;
 }
 
-void _removeTimerDelayList(sTimerHandle_t *timer)
+void _removeTimerTimeoutList(sTimerHandle_t *timer)
 {
   __sCriticalRegionBegin();
-  if (__delayList == NULL)
+  if (__TimeoutList == NULL)
   {
     __sCriticalRegionEnd();
     return;
   }
 
-  if (__delayList->timer == timer)
+  if (__TimeoutList->timer == timer)
   {
-    simpleRTOSDelay *temp = __delayList;
-    __delayList = __delayList->next;
+    simpleRTOSTimeout *temp = __TimeoutList;
+    __TimeoutList = __TimeoutList->next;
     __sCriticalRegionEnd();
     free(temp);
     return;
   }
 
-  simpleRTOSDelay *curr = __delayList;
+  simpleRTOSTimeout *curr = __TimeoutList;
   while (curr->next && curr->next->timer != timer)
   {
     curr = curr->next;
   }
 
-  simpleRTOSDelay *temp = curr->next;
+  simpleRTOSTimeout *temp = curr->next;
   curr->next = temp->next;
   __sCriticalRegionEnd();
   free(temp);
 }
 
-void _removeTaskDelayList(sTaskHandle_t *task)
+void _removeTaskTimeoutList(sTaskHandle_t *task)
 {
   __sCriticalRegionBegin();
-  if (__delayList == NULL)
+  if (__TimeoutList == NULL)
   {
     __sCriticalRegionEnd();
     return;
   }
 
-  if (__delayList->task == task)
+  if (__TimeoutList->task == task)
   {
-    simpleRTOSDelay *temp = __delayList;
-    __delayList = __delayList->next;
+    simpleRTOSTimeout *temp = __TimeoutList;
+    __TimeoutList = __TimeoutList->next;
     __sCriticalRegionEnd();
     free(temp);
     return;
   }
 
-  simpleRTOSDelay *curr = __delayList;
+  simpleRTOSTimeout *curr = __TimeoutList;
   while (curr->next && curr->next->task != task)
   {
     curr = curr->next;
   }
 
-  simpleRTOSDelay *temp = curr->next;
+  simpleRTOSTimeout *temp = curr->next;
   curr->next = temp->next;
   __sCriticalRegionEnd();
   free(temp);
@@ -133,35 +133,35 @@ void _removeTaskDelayList(sTaskHandle_t *task)
 
 // function check for tasks and timer that are done wainting
 // it re-insert task that are done back to the ready taskList
-// for timer it re-insert them into the __delayList if autoReload is on,
+// for timer it re-insert them into the __TimeoutList if autoReload is on,
 // and then it returns them to tell the scheduler a time is ready to run
 void *_sCheckExpiredTimeOut(void)
 {
-  while (__delayList != NULL && __EarliestDelayUptime <= _sTickCount)
+  while (__TimeoutList != NULL && __EarliestExpiringTimeout <= _sTickCount)
   {
     __sCriticalRegionBegin();
-    simpleRTOSDelay *doneDelay = __popFirstDelay();
-    if (doneDelay->task != NULL)
+    simpleRTOSTimeout *expiredTimeout = __popFirstDelay();
+    if (expiredTimeout->task != NULL)
     {
-      _insertTask(doneDelay->task);
+      _insertTask(expiredTimeout->task);
       // _insertTask will exit critical region that why the __sCriticalRegionBegin(); is called in the loop
-      free(doneDelay);
+      free(expiredTimeout);
     }
     else
     {
-      if (doneDelay->timer->autoReload == sTrue)
+      if (expiredTimeout->timer->autoReload == sTrue)
       {
-        doneDelay->dontRunUntil = SAT_ADD_U32(doneDelay->dontRunUntil, doneDelay->timer->Period);
-        __insertDelay(doneDelay);
-        // __insertDelay will exit critical region
+        expiredTimeout->dontRunUntil = SAT_ADD_U32(expiredTimeout->dontRunUntil, expiredTimeout->timer->Period);
+        _sInsertTimeout(expiredTimeout);
+        // _sInsertTimeout will exit critical region
       }
       else
       {
         __sCriticalRegionEnd();
-        free(doneDelay);
+        free(expiredTimeout);
       }
 
-      return doneDelay->timer;
+      return expiredTimeout->timer;
     }
   }
 
@@ -171,7 +171,7 @@ void *_sCheckExpiredTimeOut(void)
 // only works on task not timers
 void sRTOSTaskDelay(sUBaseType_t duration_ms)
 {
-  simpleRTOSDelay *delay = (simpleRTOSDelay *)malloc(sizeof(simpleRTOSDelay));
+  simpleRTOSTimeout *delay = (simpleRTOSTimeout *)malloc(sizeof(simpleRTOSTimeout));
 
   delay->task = _sCurrentTask;
   delay->dontRunUntil = SAT_ADD_U32(_sTickCount, (duration_ms * (__sRTOS_SENSIBILITY / 1000)));
@@ -180,7 +180,7 @@ void sRTOSTaskDelay(sUBaseType_t duration_ms)
   __sCriticalRegionBegin();
   _sCurrentTask->status = sWaiting;
   _deleteTask(_sCurrentTask, sFalse);
-  __insertDelay(delay);
+  _sInsertTimeout(delay);
   __sCriticalRegionEnd();
   sRTOSTaskYield();
 }

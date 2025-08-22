@@ -8,16 +8,16 @@
 #include "simpleRTOS.h"
 #include "stdlib.h"
 
-typedef struct simpleRTOSDelay
+typedef struct simpleRTOSTimeout
 {
   sTaskHandle_t *task; // set null
   sTimerHandle_t *timer;
   sUBaseType_t dontRunUntil; // time in ticks where the timer can start running
-  struct simpleRTOSDelay *next;
-} simpleRTOSDelay;
+  struct simpleRTOSTimeout *next;
+} simpleRTOSTimeout;
 
-extern void __insertDelay(simpleRTOSDelay *delay);
-extern void _removeTimerDelayList(sTimerHandle_t *timer);
+extern void _sInsertTimeout(simpleRTOSTimeout *delay);
+extern void _removeTimerTimeoutList(sTimerHandle_t *timer);
 
 extern volatile sUBaseType_t _sIsTimerRunning;
 extern sUBaseType_t _sTickCount;
@@ -40,14 +40,14 @@ __STATIC_NAKED__ void _timerStart(sTimerHandle_t *, sTimerFunc_t timerTask)
 
 void __insertTimer(sTimerHandle_t *timerHandle)
 {
-  simpleRTOSDelay *delay = (simpleRTOSDelay *)malloc(sizeof(simpleRTOSDelay));
+  simpleRTOSTimeout *delay = (simpleRTOSTimeout *)malloc(sizeof(simpleRTOSTimeout));
 
   delay->task = NULL;
   delay->timer = timerHandle;
   delay->dontRunUntil = SAT_ADD_U32(_sTickCount, timerHandle->Period);
   delay->next = NULL;
 
-  __insertDelay(delay);
+  _sInsertTimeout(delay);
 }
 
 static sUBaseType_t *__taskInitStackTimer(sTimerFunc_t timerFunc, sTimerHandle_t *arg)
@@ -127,7 +127,7 @@ void sRTOSTimerStop(sTimerHandle_t *timerHandle)
   {
     __sCriticalRegionBegin();
     timerHandle->status = sBlocked;
-    _removeTimerDelayList(timerHandle);
+    _removeTimerTimeoutList(timerHandle);
   }
 }
 
@@ -148,7 +148,7 @@ void sRTOSTimerResume(sTimerHandle_t *timerHandle)
 // Do NOT delete a timer until the timer is no longer in use (Because it memory is freed).
 void sRTOSTimerDelete(sTimerHandle_t *timerHandle)
 {
-  _removeTimerDelayList(timerHandle);
+  _removeTimerTimeoutList(timerHandle);
   free(timerHandle->stackBase);
 }
 
@@ -156,6 +156,6 @@ void sRTOSTimerUpdatePeriod(sTimerHandle_t *timerHandle, sBaseType_t period)
 {
   __sCriticalRegionBegin();
   timerHandle->Period = period;
-  _removeTimerDelayList(timerHandle);
+  _removeTimerTimeoutList(timerHandle);
   __insertTimer(timerHandle);
 }

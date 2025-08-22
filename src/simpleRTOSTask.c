@@ -11,7 +11,7 @@
 
 extern void _deleteTask(sTaskHandle_t *task, sbool_t freeMem);
 extern void _insertTask(sTaskHandle_t *task);
-extern void _removeTaskDelayList(sTaskHandle_t *task);
+extern void _removeTaskTimeoutList(sTaskHandle_t *task);
 extern volatile sUBaseType_t _sTickCount;
 extern sTaskHandle_t *_sCurrentTask;
 
@@ -128,7 +128,7 @@ void sRTOSTaskStop(sTaskHandle_t *taskHandle)
   {
     if (taskHandle->status == sWaiting)
     {
-      _removeTaskDelayList(taskHandle);
+      _removeTaskTimeoutList(taskHandle);
     }
     else
     {
@@ -158,7 +158,7 @@ void sRTOSTaskResume(sTaskHandle_t *taskHandle)
   {
     if (taskHandle->status == sWaiting)
     {
-      _removeTaskDelayList(taskHandle);
+      _removeTaskTimeoutList(taskHandle);
     }
     __sCriticalRegionBegin();
     taskHandle->status = sReady;
