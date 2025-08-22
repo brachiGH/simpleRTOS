@@ -20,6 +20,7 @@ void sRTOSQueueCreate(sQueueHandle_t *queueHandle, sUBaseType_t queueLengh, sUBa
   queueHandle->index = -1;
   queueHandle->items = malloc(queueLengh * sizeof(void *));
 }
+
 sbool_t sRTOSQueueReceive(sQueueHandle_t *queueHandle, void *itemPtr, sUBaseType_t timeoutTicks)
 {
   sUBaseType_t timeoutFinish = SAT_ADD_U32(_sTickCount, timeoutTicks);
@@ -58,6 +59,30 @@ sbool_t sRTOSQueueSend(sQueueHandle_t *queueHandle, void *itemPtr, sUBaseType_t 
     sRTOSTaskYield();
     __sCriticalRegionBegin();
   }
+  void *temp = malloc(queueHandle->itemSize);
+  if (temp == NULL)
+  {
+    __sCriticalRegionEnd();
+    return sFalse;
+  }
+  memcpy(temp, itemPtr, queueHandle->itemSize);
+  queueHandle->index++;
+  sUBaseType_t writePos = queueHandle->index % queueHandle->maxLenght;
+  queueHandle->items[writePos] = temp;
+  queueHandle->lenght++;
+  __sCriticalRegionEnd();
+  return sTrue;
+}
+
+sbool_t sRTOSQueueSendFromISR(sQueueHandle_t *queueHandle, void *itemPtr)
+{
+  __sCriticalRegionBegin();
+  if (queueHandle->lenght == queueHandle->maxLenght)
+  {
+    __sCriticalRegionEnd();
+    return sFalse;
+  }
+  
   void *temp = malloc(queueHandle->itemSize);
   if (temp == NULL)
   {
