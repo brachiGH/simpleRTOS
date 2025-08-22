@@ -14,7 +14,7 @@ Note: This is not intended for production use. And only compiles with gcc.
 
 ### Scheduler 
 
-![Scheduler overview](./blockdiagram.png)
+![Scheduler overview](./scheduler-diagram.png)
 
 ## Configuration
 
