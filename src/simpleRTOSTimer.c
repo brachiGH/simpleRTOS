@@ -150,7 +150,6 @@ void sRTOSTimerDelete(sTimerHandle_t *timerHandle)
 {
   _removeTimerDelayList(timerHandle);
   free(timerHandle->stackBase);
-  free(timerHandle);
 }
 
 void sRTOSTimerUpdatePeriode(sTimerHandle_t *timerHandle, sBaseType_t period)

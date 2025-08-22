@@ -122,7 +122,6 @@ void _deleteTask(sTaskHandle_t *task, sbool_t freeMem)
   if (freeMem)
   {
     free(task->stackPt);
-    free(task);
   }
   return;
 }
