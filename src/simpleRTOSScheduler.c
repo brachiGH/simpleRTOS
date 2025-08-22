@@ -17,7 +17,7 @@
 #define SYSPRI3 (*((volatile uint32_t *)0xE000ED20))
 
 /*************PV*****************/
-volatile sUBaseType_t _sTaskPriorityBitField = 0x0; // each bit represent a priority if set to 1 then thier are tasks to execute with that priority
+volatile sUBaseType_t __TaskPriorityBitMap = 0x0; // each bit represent a priority if set to 1 then thier are tasks to execute with that priority
 sTaskHandle_t *_sTaskList[MAX_TASK_PRIORITY_COUNT] = {NULL};
 sUBaseType_t _sNumberOfReadyTaskPerPriority[MAX_TASK_PRIORITY_COUNT] = {0};
 sTaskHandle_t *__IdleTask;
@@ -39,7 +39,7 @@ void _readyTaskCounterInc(sPriority_t priority)
 {
   sUBaseType_t priorityIndex = priority + (MAX_TASK_PRIORITY_COUNT / 2); // MAX_TASK_PRIORITY_COUNT/2 is because the priority start from -16 to 15
   _sNumberOfReadyTaskPerPriority[priorityIndex]++;                       // count the number of tasks for each priority
-  _sTaskPriorityBitField |= 1u << priorityIndex;                         // set correspanding bit to 1 to tell the scheduler thier is a task to execute
+  __TaskPriorityBitMap |= 1u << priorityIndex;                         // set correspanding bit to 1 to tell the scheduler thier is a task to execute
 }
 
 void __readyTaskCounterDec(sPriority_t priority)
@@ -49,7 +49,7 @@ void __readyTaskCounterDec(sPriority_t priority)
   _sNumberOfReadyTaskPerPriority[priorityIndex]--;
   if (_sNumberOfReadyTaskPerPriority[priorityIndex] == 0)
   {
-    _sTaskPriorityBitField &= ~(1u << priorityIndex); // set correspanding bit to 0 to tell the scheduler thier is no task to execute
+    __TaskPriorityBitMap &= ~(1u << priorityIndex); // set correspanding bit to 0 to tell the scheduler thier is no task to execute
   }
 }
 
@@ -163,7 +163,7 @@ sTaskHandle_t *_sRTOSGetFirstAvailableTask(void)
   sUBaseType_t currentPriorityIndex = _sCurrentTask->priority + (MAX_TASK_PRIORITY_COUNT / 2);
 
   sUBaseType_t priorityIndex; // priorityIndex of what cloud be the next task of execute
-  unsigned int leadingZeros = __builtin_clz((unsigned int)_sTaskPriorityBitField);
+  unsigned int leadingZeros = __builtin_clz((unsigned int)__TaskPriorityBitMap);
   priorityIndex = MAX_TASK_PRIORITY_COUNT - (leadingZeros + 1);
 
   if (
