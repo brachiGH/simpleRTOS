@@ -62,6 +62,11 @@ sRTOS_StatusTypeDef sRTOSInit(sUBaseType_t BUS_FREQ);
 extern void sRTOSStartScheduler(void);
 
 /**
+ * @return current tick counter.
+ */
+sUBaseType_t sGetTick(void);
+
+/**
  * @brief Create a task.
  *
  * Allocates/initializes a TCB and stack, assigns priority, and inserts

@@ -12,7 +12,6 @@ extern void _deleteTask(sTaskHandle_t *task, sbool_t freeMem);
 extern void _insertTask(sTaskHandle_t *task);
 
 extern sTaskHandle_t *_sCurrentTask;
-extern volatile sUBaseType_t _sTickCount;
 
 void _pushTaskNotification(sTaskHandle_t *task, sUBaseType_t *message, sPriority_t priority)
 {
@@ -43,12 +42,12 @@ void sRTOSTaskNotifyFromISR(sTaskHandle_t *taskToNotify, sUBaseType_t message)
 
 sUBaseType_t sRTOSTaskNotifyTake(sUBaseType_t timeoutTicks)
 {
-  sUBaseType_t timeoutFinish = SAT_ADD_U32(_sTickCount, timeoutTicks);
+  sUBaseType_t timeoutFinish = SAT_ADD_U32(sGetTick(), timeoutTicks);
   __sCriticalRegionBegin();
   while (!_sCurrentTask->hasNotification)
   {
     __sCriticalRegionEnd();
-    if (timeoutFinish <= _sTickCount)
+    if (timeoutFinish <= sGetTick())
     {
       return sFalse;
     }

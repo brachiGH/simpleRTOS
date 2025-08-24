@@ -12,7 +12,6 @@
 extern void _deleteTask(sTaskHandle_t *task, sbool_t freeMem);
 extern void _insertTask(sTaskHandle_t *task);
 extern void _removeTaskTimeoutList(sTaskHandle_t *task);
-extern volatile sUBaseType_t _sTickCount;
 extern sTaskHandle_t *_sCurrentTask;
 
 __STATIC_NAKED__ void _taskReturn(void *)

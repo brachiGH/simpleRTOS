@@ -20,7 +20,6 @@ extern void _sInsertTimeout(simpleRTOSTimeout *delay);
 extern void _removeTimerTimeoutList(sTimerHandle_t *timer);
 
 extern volatile sUBaseType_t _sIsTimerRunning;
-extern sUBaseType_t _sTickCount;
 
 __STATIC_FORCEINLINE__ void _timerReturn(void *)
 {
@@ -40,11 +39,12 @@ __STATIC_NAKED__ void _timerStart(sTimerHandle_t *, sTimerFunc_t timerTask)
 
 void __insertTimer(sTimerHandle_t *timerHandle)
 {
+  sUBaseType_t temp = sGetTick();
   simpleRTOSTimeout *delay = (simpleRTOSTimeout *)malloc(sizeof(simpleRTOSTimeout));
 
   delay->task = NULL;
   delay->timer = timerHandle;
-  delay->dontRunUntil = SAT_ADD_U32(_sTickCount, timerHandle->Period);
+  delay->dontRunUntil = SAT_ADD_U32(temp, timerHandle->Period);
   delay->next = NULL;
 
   _sInsertTimeout(delay);

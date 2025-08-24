@@ -12,7 +12,6 @@ extern void _readyTaskCounterDec(sPriority_t Priority);
 extern void _insertTask(sTaskHandle_t *task);
 extern void _deleteTask(sTaskHandle_t *task, sbool_t freemem);
 
-extern volatile sUBaseType_t _sTickCount;
 extern sTaskHandle_t *_sCurrentTask;
 volatile sUBaseType_t __EarliestExpiringTimeout = 0;
 
@@ -137,7 +136,7 @@ void _removeTaskTimeoutList(sTaskHandle_t *task)
 // and then it returns them to tell the scheduler a time is ready to run
 void *_sCheckExpiredTimeOut(void)
 {
-  while (__TimeoutList != NULL && __EarliestExpiringTimeout <= _sTickCount)
+  while (__TimeoutList != NULL && __EarliestExpiringTimeout <= sGetTick())
   {
     __sCriticalRegionBegin();
     simpleRTOSTimeout *expiredTimeout = __popFirstDelay();
@@ -171,10 +170,11 @@ void *_sCheckExpiredTimeOut(void)
 // only works on task not timers
 void sRTOSTaskDelay(sUBaseType_t duration_ms)
 {
+  sUBaseType_t temp = sGetTick();
   simpleRTOSTimeout *delay = (simpleRTOSTimeout *)malloc(sizeof(simpleRTOSTimeout));
 
   delay->task = _sCurrentTask;
-  delay->dontRunUntil = SAT_ADD_U32(_sTickCount, (duration_ms * (__sRTOS_SENSIBILITY / 1000)));
+  delay->dontRunUntil = SAT_ADD_U32(temp, (duration_ms * (__sRTOS_SENSIBILITY / 1000)));
   delay->next = NULL;
 
   __sCriticalRegionBegin();

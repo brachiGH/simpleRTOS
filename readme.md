@@ -77,6 +77,12 @@ __STATIC_FORCEINLINE__ void __sCriticalRegionEnd(void);
 ```
 - **@brief:** Re-enables IRQ interrupts.
 
+### `sGetTick`
+current tick counter
+```c
+sUBaseType_t sGetTick(void);
+```
+
 ## Task Management
 
 ### `sRTOSTaskCreate`

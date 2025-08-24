@@ -9,7 +9,6 @@
 #include "stdlib.h"
 #include "string.h"
 
-extern volatile sUBaseType_t _sTickCount;
 extern sTaskHandle_t *_sCurrentTask;
 
 void sRTOSQueueCreate(sQueueHandle_t *queueHandle, sUBaseType_t queueLengh, sUBaseType_t itemSize)
@@ -23,12 +22,12 @@ void sRTOSQueueCreate(sQueueHandle_t *queueHandle, sUBaseType_t queueLengh, sUBa
 
 sbool_t sRTOSQueueReceive(sQueueHandle_t *queueHandle, void *itemPtr, sUBaseType_t timeoutTicks)
 {
-  sUBaseType_t timeoutFinish = SAT_ADD_U32(_sTickCount, timeoutTicks);
+  sUBaseType_t timeoutFinish = SAT_ADD_U32(sGetTick(), timeoutTicks);
   __sCriticalRegionBegin();
   while (queueHandle->lenght == 0)
   {
     __sCriticalRegionEnd();
-    if (timeoutFinish <= _sTickCount)
+    if (timeoutFinish <= sGetTick())
     {
       return sFalse;
     }
@@ -47,12 +46,12 @@ sbool_t sRTOSQueueReceive(sQueueHandle_t *queueHandle, void *itemPtr, sUBaseType
 
 sbool_t sRTOSQueueSend(sQueueHandle_t *queueHandle, void *itemPtr, sUBaseType_t timeoutTicks)
 {
-  sUBaseType_t timeoutFinish = SAT_ADD_U32(_sTickCount, timeoutTicks);
+  sUBaseType_t timeoutFinish = SAT_ADD_U32(sGetTick(), timeoutTicks);
   __sCriticalRegionBegin();
   while (queueHandle->lenght == queueHandle->maxLenght)
   {
     __sCriticalRegionEnd();
-    if (timeoutFinish <= _sTickCount)
+    if (timeoutFinish <= sGetTick())
     {
       return sFalse;
     }

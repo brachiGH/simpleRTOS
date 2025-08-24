@@ -24,7 +24,6 @@ sTaskHandle_t *__IdleTask;
 volatile sUBaseType_t _sTicksPassedExecutingCurrentTask = __sQUANTA; // set to __sQUANTA so the scheduler can begin without waiting for a quantum of time to pass
 
 sTaskHandle_t *_sCurrentTask;
-extern volatile sUBaseType_t _sTickCount;
 /********************************/
 
 void _idle(void *)
