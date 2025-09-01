@@ -138,8 +138,8 @@ sRTOS_StatusTypeDef sRTOSInit(sUBaseType_t BUS_FREQ)
 
   /* set PendSV lowest, SysTick just above PendSV (use byte access to avoid endian/shift mistakes) */
   uint8_t *shpr3 = (uint8_t *)&SYSPRI3;
-  shpr3[2] = 0xFFu; // PendSV priority byte
-  shpr3[3] = 0xFEu; // SysTick priority byte
+  shpr3[2] = 0xF0; // PendSV priority byte
+  shpr3[3] = 0xE0; // SysTick priority byte
 
   __IdleTask = (sTaskHandle_t *)malloc(sizeof(sTaskHandle_t));
   if (__IdleTask == NULL)
