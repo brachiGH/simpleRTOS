@@ -1,45 +1,175 @@
 # simpleRTOS
 
-This is a simple RTOS designed for Cortex-M4 microcontrollers, current features are timers, semaphores, mutexes, queues, and notifications.
+A lightweight Real-Time Operating System (RTOS) designed for ARM Cortex-M4 microcontrollers. Features include tasks, timers, semaphores, mutexes, queues, and task notifications.
 
-Primarily for learning and experimentation. It can a preemptive or a non-preemptive, priority-based scheduler that uses `SysTick`, and is designed with minimal memory footprint. 
+**Intended for learning and experimentation.** Supports both preemptive and non-preemptive priority-based scheduling using SysTick, with a minimal memory footprint.
 
-Note: This is not intended for production use. And only compiles with gcc.
+> **⚠️ Note:** This is not intended for production use. Requires GCC compiler.
 
-## Achitecture
+## Table of Contents
 
-- O(1) scheduler uses a bitmap for selecting the highest-priority runnable task.
-- 32 priority levels mapped to bits in a bitmap; tasks at the same level are kept in a circular doubly linked list for O(1) enqueue/dequeue and fair round-robin within that priority level.
-- Tasks for mutexes or notifications inherit priority to mitigate priority inversion.
+- [Features](#features)
+- [Architecture](#architecture)
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+  - [Configuration](#configuration)
+- [Quick Start Example](#quick-start-example)
+- [API Reference](#api-reference)
 
-### Scheduler 
+## Features
 
-![Scheduler overview](./scheduler-diagram.png)
+- **O(1) Scheduler:** Bitmap-based priority selection for constant-time task switching
+- **32 Priority Levels:** Each priority supports multiple tasks with round-robin scheduling
+- **Priority Inheritance:** Automatic priority boosting to prevent priority inversion
+- **Low Memory Footprint:** Optimized for resource-constrained embedded systems
+- **Comprehensive Synchronization:** Semaphores, mutexes, queues, and task notifications
+- **Software Timers:** Periodic and one-shot timers
 
-## Configuration
+## Architecture
 
-Configure the kernel in `simpleRTOSConfig.h` header:
+- **O(1) Scheduler:** Uses a bitmap to select the highest-priority runnable task in constant time
+- **32 Priority Levels:** Each priority is mapped to a bit in the bitmap; tasks at the same priority are organized in a circular doubly linked list for efficient O(1) enqueue/dequeue and fair round-robin scheduling
+- **Priority Inheritance:** Tasks waiting on mutexes or notifications automatically inherit the priority of blocking tasks to mitigate priority inversion
 
+### Scheduler Overview
+
+![Scheduler Diagram](./scheduler-diagram.png)
+
+## Getting Started
+
+### Prerequisites
+
+- **Hardware:** ARM Cortex-M4 microcontroller (e.g., STM32F4 series)
+- **Toolchain:** GCC ARM compiler (arm-none-eabi-gcc)
+- **Build System:** Make or compatible build tool
+### Installation
+
+1. **Clone or download** this repository into your project directory
+2. **Add source files** to your build:
+   - All source files from the `src/` directory
+3. **Include headers** in your project:
+   - Add `inc/` directory to your include path
+4. **Include the main header** in your application:
+   ```c
+   #include "simpleRTOS.h"
+   ```
+
+### Configuration
+
+Configure the kernel behavior by editing `inc/simpleRTOSConfig.h`:
+
+#### System Tick Resolution
+Choose how frequently the system timer (SysTick) fires:
 ```c
-/* RTOS sensibility is how responsive is the system*/
-#define __sRTOS_SENSIBILITY_10MS 100 // above 1MS all function that use MS time as input will works multiples of __sRTOS_SENSIBILITY in this case multipules of 10MS
-#define __sRTOS_SENSIBILITY_1MS   1000
-#define __sRTOS_SENSIBILITY_500us 2000
-#define __sRTOS_SENSIBILITY_250us 4000
-#define __sRTOS_SENSIBILITY_100us 10000
+#define __sRTOS_SENSIBILITY_10MS   100    // Tick every 10ms
+#define __sRTOS_SENSIBILITY_1MS    1000   // Tick every 1ms
+#define __sRTOS_SENSIBILITY_500us  2000   // Tick every 500µs (default)
+#define __sRTOS_SENSIBILITY_250us  4000   // Tick every 250µs
+#define __sRTOS_SENSIBILITY_100us  10000  // Tick every 100µs
 
 #define __sRTOS_SENSIBILITY __sRTOS_SENSIBILITY_500us
-/**************************************************/
+```
+**Note:** Higher sensitivity (shorter tick period) provides more responsive timing but increases interrupt overhead.
 
-#define __sUSE_PREEMPTION 1             // if set to 1 the scheduler became preemptive
-#define __sQUANTA 2                     // the quanta duration is relative to __sRTOS_SENSIBILITY
-                                        // if sensibility is 100us then 1 quanta = 100us
-                                        //(note:same priority tasks are rotate)
-#define __sTIMER_TASK_STACK_DEPTH 256   // in words
-#define __sMAX_DELAY 0xFFFFFFFF
+#### Scheduler Mode
+```c
+#define __sUSE_PREEMPTION 1  // 1 = Preemptive, 0 = Cooperative
 ```
 
-# simpleRTOS API Reference
+#### Time Quantum
+```c
+#define __sQUANTA 2  // Time slices for round-robin scheduling
+```
+Tasks at the same priority level are rotated every `__sQUANTA` ticks.
+
+#### Timer Task Stack
+```c
+#define __sTIMER_TASK_STACK_DEPTH 256  // Stack size in words (4 bytes each)
+```
+
+#### Maximum Delay 
+```c
+#define __sMAX_DELAY 0xFFFFFFFF  // Infinite wait for blocking calls
+```
+
+## Quick Start Example
+
+Here's a minimal example showing how to initialize the RTOS and create tasks:
+
+```c
+#include <stdint.h>
+#include "stm32f4xx.h"
+#include "simpleRTOS.h"
+
+// Task handles
+sTaskHandle_t task1Handle;
+sTaskHandle_t task2Handle;
+
+// Task 1: Blinks LED every 500ms
+void Task1(void *arg)
+{
+  while (1)
+  {
+    // Toggle LED
+    GPIOA->ODR ^= GPIO_PIN_5;
+    // Delay for 500ms
+    sRTOSTaskDelay(500);
+  }
+}
+
+// Task 2: Processes data
+void Task2(void *arg)
+{
+  while (1)
+  {
+    // Process some data
+    // ...
+    
+    // Yield to other tasks
+    sRTOSTaskYield();
+  }
+}
+
+int main(void)
+{
+  // Initialize system clock
+  SystemCoreClockUpdate();
+  
+  // Initialize the RTOS
+  sRTOSInit(SystemCoreClock);
+  
+  // Create Task 1 (Normal priority, 128 words stack)
+  sRTOSTaskCreate(Task1,
+                  "LED Task",
+                  NULL,
+                  128,
+                  sPriorityNormal,
+                  &task1Handle,
+                  sFalse);
+  
+  // Create Task 2 (High priority, 256 words stack)
+  sRTOSTaskCreate(Task2,
+                  "Data Task",
+                  NULL,
+                  256,
+                  sPriorityHigh,
+                  &task2Handle,
+                  sFalse);
+  
+  // Start the scheduler (does not return)
+  sRTOSStartScheduler();
+  
+  // Should never reach here
+  while (1);
+}
+```
+
+For a more complete example with timers and multiple tasks, see `example/main.c`.
+
+---
+
+# API Reference
 
 ## System Control
 
@@ -78,10 +208,12 @@ __STATIC_FORCEINLINE__ void __sCriticalRegionEnd(void);
 - **@brief:** Re-enables IRQ interrupts.
 
 ### `sGetTick`
-current tick counter
+Returns the current tick counter.
 ```c
 sUBaseType_t sGetTick(void);
 ```
+- **@brief:** Gets the current system tick count since the scheduler started.
+- **@return:** Current tick value.
 
 ## Task Management
 
@@ -364,155 +496,8 @@ __STATIC_FORCEINLINE__ sUBaseType_t srMS_TO_TICKS(sUBaseType_t timeoutMS);
 - **@param `timeoutMS`:** The time in milliseconds.
 - **@return:** The equivalent time in RTOS ticks.
 
+---
 
-## Quick usage
+## Complete Example
 
-```c
-#include <stdint.h>
-#include "stm32f4xx.h"
-#include "simpleRTOS.h"
-
-uint32_t count0, count1, count2, count3, count4;
-uint32_t timercount0, timercount1, timercount2;
-
-sTaskHandle_t Task0H;
-sTaskHandle_t Task1H;
-sTaskHandle_t Task2H;
-sTaskHandle_t Task3H;
-sTaskHandle_t Task4H;
-sTimerHandle_t Timer0H;
-sTimerHandle_t Timer1H;
-sTimerHandle_t Timer2H;
-
-void Timer0(sTimerHandle_t *h)
-{
-  timercount0++;
-}
-void Timer1(sTimerHandle_t *h)
-{
-  timercount1++;
-}
-void Timer2(sTimerHandle_t *h)
-{
-  timercount2++;
-}
-
-void Task0(void *)
-{
-  while (1)
-  {
-    count0++;
-    if (count0 == 100000)
-    {
-      sRTOSTaskStop(&Task4H);
-    }
-  }
-}
-
-void Task1(void *)
-{
-  while (1)
-  {
-    count1++;
-  }
-}
-
-void Task2(void *)
-{
-  while (1)
-  {
-    count2++;
-  }
-}
-
-void Task3(void *)
-{
-  sRTOSTaskDelay(5);
-  while (1)
-  {
-    count3++;
-    if ((count3 % 1000) == 0)
-    {
-      sRTOSTaskDelay(5);
-    }
-  }
-}
-
-void Task4(void *)
-{
-  sRTOSTaskDelay(10);
-  while (1)
-  {
-    count4++;
-    if ((count4 % 1000) == 0)
-    {
-      sRTOSTaskDelay(5);
-    }
-  }
-}
-
-int main(void)
-{
-  SystemCoreClockUpdate();
-  sRTOSInit(SystemCoreClock);
-
-  sRTOSTaskCreate(Task4,
-                  "Task4",
-                  NULL,
-                  128,
-                  sPriorityHigh,
-                  &Task4H,
-                  sFalse);
-  sRTOSTaskCreate(Task3,
-                  "Task3",
-                  NULL,
-                  128,
-                  sPriorityHigh,
-                  &Task3H,
-                  sFalse);
-  sRTOSTaskCreate(Task2,
-                  "Task2",
-                  NULL,
-                  128,
-                  sPriorityNormal,
-                  &Task2H,
-                  sTrue);
-
-  sRTOSTaskCreate(Task1,
-                  "Task1",
-                  NULL,
-                  128,
-                  sPriorityNormal,
-                  &Task1H,
-                  sTrue);
-  sRTOSTaskCreate(Task0,
-                  "Task0",
-                  NULL,
-                  128,
-                  sPriorityNormal,
-                  &Task0H,
-                  sFalse);
-
-  sRTOSTimerCreate(
-      Timer0,
-      1,
-      80,
-      sTrue,
-      &Timer0H);
-
-  sRTOSTimerCreate(
-      Timer1,
-      1,
-      160,
-      sTrue,
-      &Timer1H);
-  sRTOSTimerCreate(
-      Timer2,
-      1,
-      5,
-      sFalse,
-      &Timer2H);
-
-  sRTOSStartScheduler();
-}
-```
+For a comprehensive example demonstrating tasks, timers, and various RTOS features, see the `example/main.c` file in the repository.
