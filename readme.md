@@ -23,7 +23,7 @@ A lightweight Real-Time Operating System (RTOS) designed for ARM Cortex-M4 micro
 - **32 Priority Levels:** Each priority supports multiple tasks with round-robin scheduling
 - **Priority Inheritance:** Automatic priority boosting to prevent priority inversion
 - **Low Memory Footprint:** Optimized for resource-constrained embedded systems
-- **Comprehensive Synchronization:** Semaphores, mutexes, queues, and task notifications
+- **Synchronization:** Semaphores, mutexes, queues, and task notifications
 - **Software Timers:** Periodic and one-shot timers
 
 ## Architecture
