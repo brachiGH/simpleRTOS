@@ -43,16 +43,11 @@ A lightweight Real-Time Operating System (RTOS) designed for ARM Cortex-M4 micro
 - **Hardware:** ARM Cortex-M4 microcontroller (e.g., STM32F4 series)
 - **Toolchain:** GCC ARM compiler (arm-none-eabi-gcc)
 - **Build System:** Make or compatible build tool
-- **Libraries:** CMSIS and device-specific headers (e.g., STM32 HAL)
-
 ### Installation
 
 1. **Clone or download** this repository into your project directory
 2. **Add source files** to your build:
-   - `src/simpleRTOSScheduler.c`
-   - `src/simpleRTOSTask.c`
-   - `src/simpleRTOS.s`
-   - Other source files from the `src/` directory
+   - All source files from the `src/` directory
 3. **Include headers** in your project:
    - Add `inc/` directory to your include path
 4. **Include the main header** in your application:
@@ -93,7 +88,7 @@ Tasks at the same priority level are rotated every `__sQUANTA` ticks.
 #define __sTIMER_TASK_STACK_DEPTH 256  // Stack size in words (4 bytes each)
 ```
 
-#### Maximum Delay
+#### Maximum Delay 
 ```c
 #define __sMAX_DELAY 0xFFFFFFFF  // Infinite wait for blocking calls
 ```
