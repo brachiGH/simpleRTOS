@@ -120,7 +120,8 @@ void _deleteTask(sTaskHandle_t *task, sbool_t freeMem)
   __sCriticalRegionEnd();
   if (freeMem)
   {
-    free(task->stackPt);
+    free(task->stackBase);
+    free(task);
   }
   return;
 }
