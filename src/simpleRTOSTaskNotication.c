@@ -13,13 +13,13 @@ extern void _insertTask(sTaskHandle_t *task);
 
 extern sTaskHandle_t *_sCurrentTask;
 
-void _pushTaskNotification(sTaskHandle_t *task, sUBaseType_t *message, sPriority_t priority)
+void _pushTaskNotification(sTaskHandle_t *task, sUBaseType_t message, sPriority_t priority)
 {
   __sCriticalRegionBegin();
   if (message != NULL)
   {
     task->hasNotification = sTrue;
-    task->notificationMessage = *message;
+    task->notificationMessage = message;
   }
   if (task->priority < priority)
   {
@@ -32,12 +32,12 @@ void _pushTaskNotification(sTaskHandle_t *task, sUBaseType_t *message, sPriority
 
 void sRTOSTaskNotify(sTaskHandle_t *taskToNotify, sUBaseType_t message)
 {
-  _pushTaskNotification(taskToNotify, (void *)message, _sCurrentTask->priority);
+  _pushTaskNotification(taskToNotify, message, _sCurrentTask->priority);
 }
 
 void sRTOSTaskNotifyFromISR(sTaskHandle_t *taskToNotify, sUBaseType_t message)
 {
-  _pushTaskNotification(taskToNotify, (void *)message, sPriorityMax);
+  _pushTaskNotification(taskToNotify, message, sPriorityMax);
 }
 
 sUBaseType_t sRTOSTaskNotifyTake(sUBaseType_t timeoutTicks)
