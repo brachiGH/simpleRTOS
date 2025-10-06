@@ -16,7 +16,7 @@ extern sTaskHandle_t *_sCurrentTask;
 void _pushTaskNotification(sTaskHandle_t *task, sUBaseType_t *message, sPriority_t priority)
 {
   __sCriticalRegionBegin();
-  if (message == NULL)
+  if (message != NULL)
   {
     task->hasNotification = sTrue;
     task->notificationMessage = *message;
